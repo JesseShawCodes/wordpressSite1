@@ -20,6 +20,7 @@ class UpgradeToPremiumMenuPage extends AbstractMenuPage {
 				<li><?php _e( 'Attributes (Adding extra sorting options to the search availability form).', 'motopress-hotel-booking' ); ?></li>
 				<li><?php _e( 'Adding reservations from the backend.', 'motopress-hotel-booking' ); ?></li>
 				<li><?php _e( 'Different property prices based on a number of guests and nights.', 'motopress-hotel-booking' ); ?></li>
+				<li><?php _e( 'Export bookings data in the CSV format.', 'motopress-hotel-booking' ); ?></li>
 			</ol>
 			<a class="button button-primary" href="https://motopress.com/products/hotel-booking/?utm_source=hotel-booking-lite&utm_medium=button-in-dashboard" target="_blank"><?php
 				_e( 'Go Premium', 'motopress-hotel-booking' ); ?></a>

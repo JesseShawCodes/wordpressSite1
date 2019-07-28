@@ -578,10 +578,11 @@ ul, ol {
 ul li, ol li {
   margin-bottom: .875rem;
   padding-left: .5em;
+  list-style: none !important;
 }
 
 ul {
-  list-style: disc;
+  list-style: none;
 }
 
 ol {
@@ -1744,7 +1745,7 @@ a:hover, a:active {
 
 @media (min-width: 768px) {
   .absolute-sidebar {
-    max-width: 520px;
+    max-width: 300px;
     padding: 2.5rem 2.5rem 2.5rem 5rem;
   }
 }
@@ -2367,7 +2368,7 @@ body.has-thumbnail .custom-header {
 }
 
 .site-footer {
-  padding: 4.375rem 0;
+  /*padding: 4.375rem 0;*/
   background: #262626;
 }
 

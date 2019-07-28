@@ -96,16 +96,11 @@ class SeasonPrice {
 		return MPHB()->getSeasonRepository()->findById( $this->seasonId );
 	}
 
-	/**
-	 *
-	 * @param array $occupancyParams Adults count, children count etc.
-	 *
-	 * @return float Base or variation price.
-	 *
-	 * @see mphb_occupancy_parameters()
-	 */
-	function getPrice( $occupancyParams = array() ){
 
+	/**
+	 * @return float Base or variation price.
+	 */
+	function getPrice(){
 		$price = $this->basePrice;
 
 
@@ -120,15 +115,7 @@ class SeasonPrice {
 		return $this->stockPrices;
 	}
 
-	/**
-	 *
-	 * @param array $occupancyParams Adults count, children count etc.
-	 *
-	 * @return array
-	 *
-	 * @see mphb_occupancy_parameters()
-	 */
-	function getDatePrices( $occupancyParams = array() ){
+	function getDatePrices(){
 		$season = $this->getSeason();
 		if ( !$season ) {
 			return array();
@@ -137,7 +124,7 @@ class SeasonPrice {
 		$dates = $season->getDates();
 		$dates = array_map( array( '\MPHB\Utils\DateUtils', 'formatDateDB' ), $dates );
 
-		$price = $this->getPrice( $occupancyParams );
+		$price = $this->getPrice();
 
 		$datePrices = array_fill_keys( $dates, $price );
 		return $datePrices;

@@ -40,6 +40,8 @@
         <custom-field action="copy">mphb_public</custom-field>
         <custom-field action="copy">mphb_visible</custom-field>
         <custom-field action="copy">mphb_orderby</custom-field>
+        <custom-field action="translate">mphb_default_text</custom-field>
+        <custom-field action="copy">mphb_type</custom-field>
     </custom-fields>
     <admin-texts>
         <!-- MPHB\Settings\MainSettings -->

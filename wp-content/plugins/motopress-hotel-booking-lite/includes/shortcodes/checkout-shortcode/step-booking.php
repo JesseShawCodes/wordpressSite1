@@ -125,10 +125,12 @@ class StepBooking extends Step {
 
 		// Update price breakdown ("Price Details")
 		$priceBreakdown = $this->booking->getPriceBreakdown();
-		array_walk_recursive( $priceBreakdown, function( &$value, $key ) {
+        array_walk_recursive( $priceBreakdown, function( &$value, $key ) {
 			$value = addslashes( $value );
 		} );
-		update_post_meta( $this->booking->getId(), '_mphb_booking_price_breakdown', json_encode( $priceBreakdown ) );
+        $priceBreakdown = json_encode( $priceBreakdown );
+        $priceBreakdown = mphb_escape_json_unicodes( $priceBreakdown );
+		update_post_meta( $this->booking->getId(), '_mphb_booking_price_breakdown', $priceBreakdown );
 
 		MPHB()->getSession()->set( 'mphb_checkout_step', \MPHB\Shortcodes\CheckoutShortcode::STEP_COMPLETE );
 

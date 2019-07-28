@@ -4,7 +4,7 @@ namespace MPHB\Upgrades;
 
 use \MPHB\Entities;
 
-class BackgroundUpgrader extends \MPHB\BackgroundProcess {
+class BackgroundUpgrader extends \MPHB\BackgroundPausableProcess {
 
 	protected $action = 'upgrader';
 

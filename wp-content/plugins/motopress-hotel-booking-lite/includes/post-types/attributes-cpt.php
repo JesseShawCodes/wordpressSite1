@@ -120,6 +120,8 @@ class AttributesCPT extends EditableCPT {
 		$visible = (bool)get_post_meta( $postId, 'mphb_visible', true );
 		$orderby = get_post_meta( $postId, 'mphb_orderby', true );
 		$orderby = empty( $orderby ) ? $this->getDefaultOrderby() : $orderby;
+        $defaultText = get_post_meta( $postId, 'mphb_default_text', true );
+        $defaultText = empty( $defaultText ) ? _x( '&mdash;', 'Not selected value in the search form.', 'motopress-hotel-booking' ) : $defaultText;
 		$type	 = get_post_meta( $postId, 'mphb_type', true );
 		$type	 = empty( $type ) ? 'select' : $type;
 
@@ -177,6 +179,7 @@ class AttributesCPT extends EditableCPT {
 			'public'		=> $public,
 			'visible'		=> $visible,
 			'orderby'		=> $orderby,
+            'default_text'  => $defaultText,
 			'type'			=> $type,
 			'hasDuplicates' => false
 		) );
@@ -297,7 +300,12 @@ class AttributesCPT extends EditableCPT {
 				'label'			 => __( 'Default Sort Order', 'motopress-hotel-booking' ),
 				'list'			 => $orders,
 				'default'		 => $defaultOrder
-			) )
+			) ),
+            Fields\FieldFactory::create( 'mphb_default_text', array(
+                'type'           => 'text',
+                'label'          => __( 'Default Text', 'motopress-hotel-booking' ),
+                'default'        => _x( '&mdash;', 'Not selected value in the search form.', 'motopress-hotel-booking' )
+            ) )
 		) );
 
 		$attributeTypes = apply_filters( 'mphb_room_attributes_type_selector', array(

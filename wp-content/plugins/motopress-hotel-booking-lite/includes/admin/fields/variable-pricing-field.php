@@ -214,7 +214,7 @@ class VariablePricingField extends InputField {
 	}
 
 	protected function renderRestrictedPrice( $name, $value, $atts = '', $class = '' ){
-		return $this->renderPrice( $name, $value, 'disabled="disabled" ' . $atts, 'mphb-keep-disabled ' . $class ) . '<br />' . mphb_upgrade_to_premium_message( '<span class="description">', '</span>' );
+		return $this->renderPrice( $name, $value, 'disabled="disabled" ' . $atts, 'mphb-keep-disabled ' . $class ) . '<br />' . mphb_upgrade_to_premium_message();
 	}
 
 	protected function renderAdults( $name, $value, $atts = '', $class = '' ){

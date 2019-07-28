@@ -2,282 +2,178 @@
 
 namespace MPHB;
 
+use MPHB\Libraries\WP_Background_Processing\WP_Background_Process;
+
 /**
- * @note Action name length must be less than or equal to 16 symbols. Length of option name is 64.
- * 			Option name consist of:
- * 			+ (1-4) blog id
- * 			+ (23) wp's transient prefix "_site_transient_timeout"
- * 			+ (7) prefix "mphb_bp"
- * 			+ (1) prefix separator "_"
- * 			+ action name of background process
- * 			+ (13) suffix "_process_lock"
- *
+ * @note Action name length must be less than or equal to 19 symbols. Length of
+ *       option name is 64. Option name consist of:
+ *           + (1-4) blog id
+ *           + (8) prefix "mphb_bg" + prefix separator "_"
+ *           + (16 <=) action name of background process
+ *           + (13) suffix "_process_lock"
+ *           + (23) wp's transient prefix "_site_transient_timeout"
  */
-abstract class BackgroundProcess extends Libraries\WP_Background_Processing\WP_Background_Process {
+abstract class BackgroundProcess extends WP_Background_Process
+{
+	protected $prefix = 'mphb_bg';
 
-	/**
-	 *
-	 * @var bool
-	 */
-	protected $paused = false;
+    protected $tasksCountOption;
+    protected $completedTasksOption;
 
-	/**
-	 *
-	 * @var string
-	 */
-	protected $prefix = 'mphb_bp';
+	public function __construct()
+    {
+        $blogId = get_current_blog_id();
 
-	/**
-	 *
-	 * @var array
-	 */
-	protected $wait_actions_option;
-
-	public function __construct(){
-
-		$this->prefix = $this->prefix . get_current_blog_id();
+        if ($blogId > 1) {
+            $this->prefix = $this->prefix . $blogId;
+        }
 
 		parent::__construct();
 
-		$this->wait_actions_option = $this->identifier . '_wait_actions';
-
-		foreach ( $this->get_wait_actions() as $action ) {
-			add_action( $action, array( $this, 'wait_action_handle' ) );
-		}
+        $this->tasksCountOption = $this->identifier . '_tasks_count';
+        $this->completedTasksOption = $this->identifier . '_completed_tasks_count';
 	}
 
-	protected function complete(){
+	protected function complete()
+    {
 		parent::complete();
-		$this->clear_total_queue_size();
-		do_action( $this->identifier . '_complete' );
+
+		$this->afterComplete();
 	}
+
+    protected function afterComplete()
+    {
+		delete_option($this->tasksCountOption);
+		delete_option($this->completedTasksOption);
+
+		do_action($this->identifier . '_complete');
+    }
 
 	/**
-	 *
 	 * @return string
 	 */
-	public function get_identifier(){
+	public function getIdentifier()
+    {
 		return $this->identifier;
 	}
 
 	/**
-	 *
-	 * @param string $action
-	 */
-	public function wait_action( $action ){
-		$wait_actions = $this->get_wait_actions();
-
-		if ( !in_array( $action, $wait_actions ) ) {
-			$wait_actions[] = $action;
-			update_option( $this->wait_actions_option, $wait_actions );
-		}
-	}
-
-	public function wait_action_handle(){
-		$actions = array_filter( $this->get_wait_actions(), function( $action ) {
-			return !doing_action( $action ) && !did_action( $action );
-		} );
-
-		if ( empty( $actions ) ) {
-			delete_option( $this->wait_actions_option );
-			$this->dispatch();
-		} else {
-			update_option( $this->wait_actions_option, $actions );
-		}
-	}
-
-	public function pause(){
-
-		$this->paused = true;
-
-		$this->unlock_process();
-
-		$this->schedule_event();
-
-		return;
-	}
-
-	/**
 	 * @return bool
 	 */
-	public function is_in_progress(){
-		return !$this->is_queue_empty();
+	public function isInProgress()
+    {
+        // The main check is is_queue_empty(). But we also need to check if the
+        // process actually stopped (unlocked) - is_process_running()
+        return $this->is_process_running() || !$this->is_queue_empty();
 	}
 
 	/**
-	 *
-	 * @return bool
+	 * @return int Only the size of the queue left to proceed (exclude completed
+     *             batches).
 	 */
-	protected function is_process_running(){
-		$wait_actions = $this->get_wait_actions();
-		return parent::is_process_running() || !empty( $wait_actions );
-	}
-
-	/**
-	 *
-	 * @return array
-	 */
-	protected function get_wait_actions(){
-		return get_option( $this->wait_actions_option, array() );
-	}
-
-	/**
-	 * Handle cron healthcheck
-	 *
-	 * Restart the background process if not already running
-	 * and data exists in the queue.
-	 */
-	public function handle_cron_healthcheck(){
-
-		if ( $this->is_process_running() ) {
-			// Background process already running.
-			return;
-		}
-
-		if ( $this->is_queue_empty() ) {
-			// No data to process.
-			$this->clear_scheduled_event();
-			do_action( $this->identifier . '_complete' );
-			return;
-		}
-
-		$this->handle();
-	}
-
-	/**
-	 * Override parent method for make possible handle without wp_die in the end
-	 *
-	 * @return bool
-	 */
-	protected function handle(){
-		$this->lock_process();
-
-		do {
-			$batch = $this->get_batch();
-
-			foreach ( $batch->data as $key => $value ) {
-				$task = $this->task( $value );
-
-				if ( false !== $task ) {
-					$batch->data[$key] = $task;
-				} else {
-					unset( $batch->data[$key] );
-				}
-
-				if ( $this->time_exceeded() || $this->memory_exceeded() ) {
-					// Batch limits reached.
-					break;
-				}
-
-				if ( $this->paused ) {
-					// Process is paused
-					break;
-				}
-			}
-
-			// Update or delete current batch.
-			if ( !empty( $batch->data ) ) {
-				$this->update( $batch->key, $batch->data );
-			} else {
-				$this->delete( $batch->key );
-			}
-		} while ( !$this->time_exceeded() && !$this->memory_exceeded() && !$this->is_queue_empty() && !$this->paused );
-
-		$this->unlock_process();
-
-		// Start next batch or complete process.
-		if ( !$this->is_queue_empty() ) {
-			$this->dispatch();
-		} else {
-			$this->complete();
-		}
-
-		return;
-	}
-
-	/**
-	 *
-	 * @return int
-	 */
-	public function get_queue_size(){
+	public function getQueueSize()
+    {
 		global $wpdb;
 
-		$table	 = $wpdb->options;
-		$column	 = 'option_name';
+		if (is_multisite()) {
+			$table  = $wpdb->sitemeta;
+			$column = 'meta_key';
+		} else {
+            $table  = $wpdb->options;
+            $column = 'option_name';
+        }
 
-		if ( is_multisite() ) {
-			$table	 = $wpdb->sitemeta;
-			$column	 = 'meta_key';
-		}
+		$search = $this->identifier . '_batch_%';
 
-		$key = $this->identifier . '_batch_%';
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE {$column} LIKE %s",
+                $search
+            )
+        );
 
-		$count = $wpdb->get_var( $wpdb->prepare( "
-			SELECT COUNT(*)
-			FROM {$table}
-			WHERE {$column} LIKE %s
-		", $key ) );
-
-		return (int) $count;
+		return (int)$count;
 	}
 
 	/**
-	 * Retrieve full queue size (include completed batches)
-	 *
 	 * @return int
 	 */
-	public function get_total_queue_size(){
-		$totalSize = (int) get_option( $this->identifier . '_total', 0 );
-		if ( !$totalSize ) {
-			$totalSize = $this->get_queue_size();
-		}
-		return max( 0, $totalSize );
+	public function getTasksCount()
+    {
+		return (int)get_option($this->tasksCountOption, 0);
 	}
 
 	/**
-	 *
-	 * @param int $size
+	 * @param int $count
 	 */
-	protected function update_total_queue_size( $size ){
-		update_option( $this->identifier . '_total', $size );
+	protected function setTasksCount($count)
+    {
+		update_option($this->tasksCountOption, $count);
 	}
 
 	/**
-	 * Increase total queue size
-	 *
-	 * @param int $inc Optional. Default 1;
+	 * @param int $amount
 	 */
-	public function inc_total_queue_size( $inc = 1 ){
-		$this->update_total_queue_size( $this->get_total_queue_size() + $inc );
+	protected function increaseTasksCount($amount)
+    {
+		$this->setTasksCount($this->getTasksCount() + $amount);
 	}
 
-	public function clear_total_queue_size(){
-		delete_option( $this->identifier . '_total' );
-	}
+    /**
+     * @return int
+     */
+    public function getCompletedTasksCount()
+    {
+        return (int)get_option($this->completedTasksOption, 0);
+    }
+
+    /**
+     * @param int $count
+     */
+    protected function setCompletedTasksCount($count)
+    {
+        update_option($this->completedTasksOption, $count);
+    }
+
+    /**
+     * @param int $amount Optional. 1 by default.
+     */
+    protected function increaseCompletedTasksCount($amount = 1)
+    {
+        $this->setCompletedTasksCount($this->getCompletedTasksCount() + $amount);
+    }
+
+    protected function after_task_done()
+    {
+        $this->increaseCompletedTasksCount();
+    }
 
 	/**
-	 *
-	 * @return float
+	 * @return float The progress value in range [0; 100].
 	 */
-	public function get_progress_percent(){
-		$total		 = max( $this->get_total_queue_size(), 0 );
-		$progress	 = 100;
+	public function getProgress()
+    {
+        $total = $this->getTasksCount();
+        $completed = $this->getCompletedTasksCount();
 
-		if ( $total > 0 ) {
-			$queueSize	 = $this->get_queue_size();
-			$completed	 = max( $total - $queueSize, 0 );
-			$progress	 = round( $completed / $total * 100, 2 );
-		}
+		if ($total > 0) {
+			$progress = round($completed / $total * 100, 2);
+            $progress = max(0, min($progress, 100));
+		} else {
+            $progress = 100;
+        }
 
 		return $progress;
 	}
 
-	public function save(){
+	public function save()
+    {
 		parent::save();
-		if ( !empty( $this->data ) ) {
-			$this->inc_total_queue_size();
+
+		if (!empty($this->data)) {
+			$this->increaseTasksCount(count($this->data));
 		}
+
 		return $this;
 	}
-
 }

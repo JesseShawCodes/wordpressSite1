@@ -4,7 +4,7 @@ namespace MPHB\Upgrades;
 
 use \MPHB\Entities;
 
-class BackgroundBookingUpgrader_2_2_0 extends \MPHB\BackgroundProcess {
+class BackgroundBookingUpgrader_2_2_0 extends \MPHB\BackgroundPausableProcess {
 
 	const BATCH_SIZE = 500;
 

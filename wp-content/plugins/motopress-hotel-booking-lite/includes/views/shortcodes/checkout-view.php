@@ -214,13 +214,13 @@ class CheckoutView {
 				$isFirst = true;
 				foreach ( $allowedRates as $rate ) {
 					$rate = apply_filters( '_mphb_translate_rate', $rate );
-					$occupancyParams = mphb_occupancy_parameters( array(
+					MPHB()->reservationRequest()->setupParameters( array(
 						'adults'		 => $adults,
 						'children'		 => $children,
 						'check_in_date'	 => $booking->getCheckInDate(),
 						'check_out_date' => $booking->getCheckOutDate()
 					) );
-					$ratePrice = mphb_format_price( $rate->calcPrice( $booking->getCheckInDate(), $booking->getCheckOutDate(), $occupancyParams ) );
+					$ratePrice = mphb_format_price( $rate->calcPrice( $booking->getCheckInDate(), $booking->getCheckOutDate() ) );
 					?>
 
 					<p class="mphb-room-rate-variant">

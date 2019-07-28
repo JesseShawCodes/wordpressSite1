@@ -12,7 +12,7 @@ class iCalMenuPage extends AbstractMenuPage {
 			<hr class="wp-header-end" />
 
 			<p><?php _e( 'Sync your bookings across all online channels like Booking.com, TripAdvisor, Airbnb etc. via iCalendar file format.', 'motopress-hotel-booking' ); ?></p>
-			<?php echo mphb_upgrade_to_premium_message(); ?>
+			<?php echo mphb_upgrade_to_premium_message( 'div' ); ?>
 		</div>
 		<?php
 	}

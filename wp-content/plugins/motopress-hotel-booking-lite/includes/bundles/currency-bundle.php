@@ -125,7 +125,7 @@ class CurrencyBundle {
 			'NZD' => __( 'New Zealand dollar', 'motopress-hotel-booking' ),
 			'OMR' => __( 'Omani rial', 'motopress-hotel-booking' ),
 			'PAB' => __( 'Panamanian balboa', 'motopress-hotel-booking' ),
-			'PEN' => __( 'Peruvian nuevo sol', 'motopress-hotel-booking' ),
+			'PEN' => __( 'Sol', 'motopress-hotel-booking' ),
 			'PGK' => __( 'Papua New Guinean kina', 'motopress-hotel-booking' ),
 			'PHP' => __( 'Philippine peso', 'motopress-hotel-booking' ),
 			'PKR' => __( 'Pakistani rupee', 'motopress-hotel-booking' ),
@@ -166,6 +166,7 @@ class CurrencyBundle {
 			'UYU' => __( 'Uruguayan peso', 'motopress-hotel-booking' ),
 			'UZS' => __( 'Uzbekistani som', 'motopress-hotel-booking' ),
 			'VEF' => __( 'Venezuelan bol&iacute;var', 'motopress-hotel-booking' ),
+			'VES' => __( 'Bol&iacute;var soberano', 'motopress-hotel-booking' ),
 			'VND' => __( 'Vietnamese &#x111;&#x1ed3;ng', 'motopress-hotel-booking' ),
 			'VUV' => __( 'Vanuatu vatu', 'motopress-hotel-booking' ),
 			'WST' => __( 'Samoan t&#x101;l&#x101;', 'motopress-hotel-booking' ),
@@ -175,7 +176,7 @@ class CurrencyBundle {
 			'XPF' => __( 'CFP franc', 'motopress-hotel-booking' ),
 			'YER' => __( 'Yemeni rial', 'motopress-hotel-booking' ),
 			'ZAR' => __( 'South African rand', 'motopress-hotel-booking' ),
-			'ZMW' => __( 'Zambian kwacha', 'motopress-hotel-booking' ),
+			'ZMW' => __( 'Zambian kwacha', 'motopress-hotel-booking' )
 		);
 		$labels = apply_filters( 'mphb_currency_labels', $labels );
 
@@ -333,6 +334,7 @@ class CurrencyBundle {
 			'UYU' => '&#36;',
 			'UZS' => 'UZS',
 			'VEF' => 'Bs F',
+			'VES' => 'Bs.S',
 			'VND' => '&#8363;',
 			'VUV' => 'Vt',
 			'WST' => 'T',
@@ -342,7 +344,7 @@ class CurrencyBundle {
 			'XPF' => 'Fr',
 			'YER' => '&#xfdfc;',
 			'ZAR' => '&#82;',
-			'ZMW' => 'ZK',
+			'ZMW' => 'ZK'
 		);
 		$symbols = apply_filters( 'mphb_currency_symbols', $symbols );
 

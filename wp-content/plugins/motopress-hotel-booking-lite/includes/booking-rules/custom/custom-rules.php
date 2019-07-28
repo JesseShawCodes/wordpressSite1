@@ -18,6 +18,11 @@ class CustomRules implements RuleVerifiable {
 	 */
 	private $rules = array();
 
+    /**
+     * @var \MPHB\BookingRules\Custom\CustomRule[]
+     */
+    protected $list = array();
+
 	public function __construct( $customRules ){
 		foreach ( $customRules as $customRule ) {
 			$ruleInstance = CustomRule::create( $customRule );
@@ -25,6 +30,8 @@ class CustomRules implements RuleVerifiable {
 			if ( is_null( $ruleInstance ) ) {
 				continue;
 			}
+
+            $this->list[] = $ruleInstance;
 
 			$typeId = (int)$customRule['room_type_id'];
 			$roomId = (int)$customRule['room_id'];
@@ -297,5 +304,54 @@ class CustomRules implements RuleVerifiable {
 
 		return $rooms;
 	}
+
+    /**
+     * @param array $atts
+     * @param int $atts['roomTypeId'] Optional. 0 by default (get all).
+     * @param int $atts['roomId'] Optional. 0 by default (get all).
+     * @param string $atts['restriction'] blocked|check-in|check-out|stay-in.
+     *                                    Optional. "blocked" by default.
+     * @return array [[roomTypeId, roomId, startDate, endDate, comment]]
+     *               (roomTypeId and roomId of the rule, not the attributes)
+     */
+    public function filter($atts)
+    {
+        $roomTypeId  = isset($atts['roomTypeId']) ? $atts['roomTypeId'] : 0;
+        $roomId      = isset($atts['roomId']) ? $atts['roomId'] : 0;
+        $restriction = isset($atts['restriction']) ? $atts['restriction'] : 'blocked';
+
+        $results = array();
+
+        foreach ($this->list as $rule) {
+            $ruleTypeId = $rule->getRoomTypeId();
+            $ruleRoomId = $rule->getRoomId();
+
+            if ($roomTypeId != 0 && $ruleTypeId != 0 && $roomTypeId != $ruleTypeId) {
+                continue;
+            }
+
+            if ($roomId != 0 && $ruleRoomId != 0 && $roomId != $ruleRoomId) {
+                continue;
+            }
+
+            switch ($restriction) {
+                case 'blocked': if (!$rule->isBlocked()) continue 2; break;
+                case 'check-in': if (!$rule->noCheckIn()) continue 2; break;
+                case 'check-out': if (!$rule->noCheckOut()) continue 2; break;
+                case 'stay-in': if (!$rule->noStayIn()) continue 2; break;
+            }
+
+            // All filters done. Add the rule to results
+            $results[] = array(
+                'roomTypeId' => $ruleTypeId,
+                'roomId'     => $ruleRoomId,
+                'startDate'  => $rule->getStartDate(),
+                'endDate'    => $rule->getEndDate(),
+                'comment'    => $rule->getComment()
+            );
+        }
+
+        return $results;
+    }
 
 }

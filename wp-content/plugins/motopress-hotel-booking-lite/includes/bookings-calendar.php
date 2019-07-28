@@ -229,7 +229,7 @@ class BookingsCalendar {
                 $bookingDetails['children'] = $reservedRoom->getChildren();
                 $bookingDetails['ical'] = array();
 
-                if (mphb_is_imported_uid($reservedRoom->getUid())) {
+                if ($booking->isImported()) {
                     $bookingDetails['ical'] = array(
                         'uid'         => $reservedRoom->getUid(),
                         'summary'     => $booking->getICalSummary(),
@@ -920,7 +920,11 @@ class BookingsCalendar {
         $title = implode('&#10;', $info);
 
         if (!empty($ical)) {
-            $title .= '&#10;' . sprintf(__('Booking imported with UID %s.', 'motopress-hotel-booking'), $ical['uid']);
+            if (!empty($ical['uid'])) {
+                $title .= '&#10;' . sprintf(__('Booking imported with UID %s.', 'motopress-hotel-booking'), $ical['uid']);
+            } else {
+                $title .= '&#10;' . __('Imported booking.', 'motopress-hotel-booking');
+            }
 
             if (!empty($ical['summary'])) {
                 $title .= '&#10;' . sprintf(__('Summary: %s.', 'motopress-hotel-booking'), $ical['summary']);

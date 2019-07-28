@@ -14,6 +14,7 @@ class SettingsRegistry {
 	private $taxesAndFees;
 	private $payment;
 	private $license;
+    private $export;
 
 	public function __construct(){
 		$this->main			 = new MainSettings();
@@ -26,6 +27,7 @@ class SettingsRegistry {
 		$this->taxesAndFees	 = new TaxesAndFeesSettings();
 		$this->payment		 = new PaymentSettings();
 		$this->license		 = new LicenseSettings();
+        $this->export        = new ExportSettings();
 	}
 
 	/**
@@ -107,5 +109,13 @@ class SettingsRegistry {
 	public function payment(){
 		return $this->payment;
 	}
+
+    /**
+     * @return \MPHB\Settings\ExportSettings
+     */
+    public function export()
+    {
+        return $this->export;
+    }
 
 }

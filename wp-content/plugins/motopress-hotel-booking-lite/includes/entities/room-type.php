@@ -390,14 +390,14 @@ class RoomType {
 
 		$rates = MPHB()->getRateRepository()->findAllActiveByRoomType( $this->originalId, $dates );
 
-		// Don't pass "adults" and "children" - the function will use search
-		// parameters and will try to get max price for searched occupancy
-		$occupancyParams = mphb_occupancy_parameters( $dates );
+		// Don't pass "adults" and "children" - we will use search parameters
+		// and will try to get the proper price for searched occupancy
+        MPHB()->reservationRequest()->setupSearchParameters()->setupParameters( $dates );
 
 		if ( !empty( $rates ) ) {
 
-			$priceList = array_map( function($rate) use( $checkInDate, $checkOutDate, $occupancyParams ) {
-				return $rate->calcPrice( $checkInDate, $checkOutDate, $occupancyParams );
+			$priceList = array_map( function($rate) use( $checkInDate, $checkOutDate ) {
+				return $rate->calcPrice( $checkInDate, $checkOutDate );
 			}, $rates );
 
 			$price = !empty( $priceList ) ? min( $priceList ) : 0.0;

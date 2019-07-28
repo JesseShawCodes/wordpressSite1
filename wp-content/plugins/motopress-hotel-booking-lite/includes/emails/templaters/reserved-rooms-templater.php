@@ -96,9 +96,13 @@ class ReservedRoomsTemplater extends AbstractTemplater {
 				break;
 			case 'room_type_categories':
 				if ( isset( $this->reservedRoom ) ) {
-					$roomType	 = MPHB()->getRoomTypeRepository()->findById( $this->reservedRoom->getRoomTypeId() );
-					$roomType	 = apply_filters( '_mphb_translate_room_type', $roomType, $this->booking->getLanguage() );
-					$replaceText = ( $roomType ) ? $roomType->getCategories() : '';
+					$roomType = MPHB()->getRoomTypeRepository()->findById( $this->reservedRoom->getRoomTypeId() );
+					$roomType = apply_filters( '_mphb_translate_room_type', $roomType, $this->booking->getLanguage() );
+                    if ( $roomType ) {
+                        $categories    = $roomType->getCategories();
+                        $categoryNames = wp_list_pluck( $categories, 'name' );
+                        $replaceText   = implode( ', ', $categoryNames );
+                    }
 				}
 				break;
 			case 'room_type_bed_type':

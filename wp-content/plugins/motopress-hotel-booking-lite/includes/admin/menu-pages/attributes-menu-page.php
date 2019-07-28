@@ -13,7 +13,7 @@ class AttributesMenuPage extends AbstractMenuPage
             <h1 class="wp-heading-inline"><?php _e('Attributes', 'motopress-hotel-booking'); ?></h1>
 
             <button class="page-title-action button-disabled"><?php _ex( 'Add New', 'Add New Attribute', 'motopress-hotel-booking' ); ?></button>
-            <span class="description"><?php echo mphb_upgrade_to_premium_message(); ?></span>
+            <?php echo mphb_upgrade_to_premium_message(); ?>
 
             <hr class="wp-header-end" />
 

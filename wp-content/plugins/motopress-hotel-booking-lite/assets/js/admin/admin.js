@@ -197,6 +197,301 @@ MPHBAdmin.CalendarPopup = can.Control.extend(
     }
 );
 
+MPHBAdmin.ExportBookings = can.Control.extend(
+    {},
+    {
+        rooms: null, // select[name="room"]
+        statuses: null, // select[name="status"]
+        startDate: null, // input.mphb-export-start-date
+        endDate: null, // input.mphb-export-end-date
+        searchBy: null, // select[name="search_by"]
+        columnsFieldset: null, // fieldset.mphb-export-columns
+        exportColumns: null, // input[type="checkbox"]
+        submitButton: null, // button.submit-button
+        preloader: null, // span.mphb-preloader
+        progressBar: null, // div.mphb-progress
+        progressBack: null, // .mphb-progress__bar
+        progressText: null, // .mphb-progress__text
+        cancelButton: null, // button.cancel-button
+        errorsWrapper: null, // div.mphb-errors-wrapper
+
+        timeoutInterval: 1000,
+        shortInterval: 500,
+
+        checkTimer: null,
+        cancelTimer: null,
+
+        messages: {
+            error: '',
+            processing: '',
+            cancelling: ''
+        },
+
+        init: function (element, args) {
+            if (element.length == 0) {
+                return;
+            }
+
+            this.initMessages();
+            this.initElements(element);
+            this.initDatepickers();
+
+            // Did the previous process finished it's work?
+            if (MPHBAdmin.Plugin.myThis.data.settings.isExportingBookings) {
+                this.alreadyStarted();
+                this.checkTimer = setTimeout(this.checkExport.bind(this), 0);
+            }
+        },
+
+        initMessages: function () {
+            var translations = MPHBAdmin.Plugin.myThis.data.translations;
+
+            this.messages.error = translations.errorHasOccured;
+            this.messages.processing = translations.processing;
+            this.messages.cancelling = translations.cancelling;
+        },
+
+        initElements: function (root) {
+            this.rooms           = root.find('select[name="room"]');
+            this.statuses        = root.find('select[name="status"]');
+            this.startDate       = root.find('.mphb-export-start-date');
+            this.endDate         = root.find('.mphb-export-end-date');
+            this.searchBy        = root.find('select[name="search_by"]');
+            this.columnsFieldset = root.find('.mphb-export-columns');
+            this.exportColumns   = this.columnsFieldset.find('input[type="checkbox"]');
+            this.submitButton    = root.find('.submit-button');
+            this.preloader       = root.find('.mphb-preloader');
+            this.progressBar     = root.find('.mphb-progress');
+            this.progressBack    = this.progressBar.children('.mphb-progress__bar');
+            this.progressText    = this.progressBar.children('.mphb-progress__text');
+            this.cancelButton    = root.find('.cancel-button');
+            this.errorsWrapper   = root.find('.mphb-errors-wrapper');
+        },
+
+        initDatepickers: function () {
+            var pluginSettings = MPHBAdmin.Plugin.myThis.data.settings;
+
+            var settings = {
+                dateFormat: pluginSettings.dateFormat,
+                showSpeed: 0,
+                showOtherMonths: true,
+                monthsToShow: pluginSettings.numberOfMonthDatepicker,
+                pickerClass: pluginSettings.datepickerClass
+            };
+
+            this.startDate.datepick(settings);
+            this.endDate.datepick(settings);
+        },
+
+        ".submit-button click": function (element, event) {
+            event.preventDefault();
+
+            this.beforeStart();
+            this.startExport();
+        },
+
+        ".cancel-button click": function (element, event) {
+            event.preventDefault();
+
+            clearTimeout(this.checkTimer);
+
+            this.afterCancel();
+            this.cancelExport();
+        },
+
+        startExport: function () {
+            var action = 'mphb_export_bookings_csv',
+                data = MPHBAdmin.Plugin.myThis.data,
+                self = this;
+
+            $.ajax({
+                url: data.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: action,
+                    mphb_nonce: data.nonces[action],
+                    args: this.getValues()
+                },
+                success: function (response) {
+                    if (response.hasOwnProperty('success') && response.success) {
+                        self.afterStart();
+                        self.checkTimer = setTimeout(self.checkExport.bind(self), self.shortInterval);
+                    } else {
+                        self.badResponse( response.success ? null : response.data.message );
+                    }
+                },
+                error: this.badResponse.bind(this)
+            });
+        },
+
+        checkExport: function () {
+            var action = 'mphb_check_bookings_csv',
+                data = MPHBAdmin.Plugin.myThis.data,
+                self = this;
+
+            $.ajax({
+                url: data.ajaxUrl,
+                type: 'GET',
+                dataType: 'json',
+                data: {
+                    action: action,
+                    mphb_nonce: data.nonces[action]
+                },
+                success: function (response) {
+                    if (response.hasOwnProperty('success') && response.success) {
+                        if (response.data.finished) {
+                            self.setProgress(100);
+                            if (response.data.file) {
+                                self.downloadFile(response.data.file);
+                            } else {
+                                self.setMessage(self.messages.error);
+                            }
+                            self.afterEnd();
+                        } else {
+                            self.setProgress(Math.floor(response.data.progress));
+                            self.checkTimer = setTimeout(self.checkExport.bind(self), self.timeoutInterval);
+                        }
+                    } else {
+                        self.badResponse();
+                    }
+                },
+                error: this.badResponse.bind(this)
+            });
+        },
+
+        cancelExport: function () {
+            var action = 'mphb_cancel_bookings_csv',
+                data = MPHBAdmin.Plugin.myThis.data,
+                self = this;
+
+            $.ajax({
+                url: data.ajaxUrl,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: action,
+                    mphb_nonce: data.nonces[action]
+                },
+                success: function (response) {
+                    if (response.hasOwnProperty('success') && response.success) {
+                        if (!response.data.cancelled) {
+                            self.cancelTimer = setTimeout(self.cancelExport.bind(self), self.timeoutInterval);
+                        } else {
+                            self.afterEnd();
+                        }
+                    } else {
+                        self.badResponse();
+                    }
+                },
+                error: this.badResponse.bind(this)
+            });
+        },
+
+        badResponse: function (message) {
+            if (message == undefined) {
+                message = this.messages.error;
+            }
+
+            if (message != '') {
+                this.setMessage(message);
+            }
+
+            this.afterEnd();
+        },
+
+        downloadFile: function (file) {
+            window.location = file;
+        },
+
+        setProgress: function (progress, text) {
+            if (text == undefined) {
+                text = progress == 0 ? this.messages.processing : progress + '%';
+            }
+
+            this.progressBack.css('width', progress + '%');
+            this.progressText.text(text);
+
+            if (progress < 100) {
+                if (progress == 0) {
+                    this.progressBar.addClass('mphb-wait');
+                } else {
+                    this.progressBar.removeClass('mphb-wait');
+                }
+            }
+        },
+
+        setMessage: function (message) {
+            this.errorsWrapper.text(message).removeClass('mphb-hide');
+        },
+
+        beforeStart: function () {
+            this.submitButton.prop('disabled', true);
+            this.preloader.removeClass('mphb-hide');
+            this.errorsWrapper.addClass('mphb-hide').empty();
+            this.setProgress(0);
+            this.progressBar.removeClass('mphb-hide');
+            this.cancelButton.removeClass('mphb-hide');
+        },
+
+        afterStart: function () {
+            this.cancelButton.prop('disabled', false);
+        },
+
+        alreadyStarted: function () {
+            this.submitButton.prop('disabled', true);
+            this.preloader.removeClass('mphb-hide');
+            this.progressBar.removeClass('mphb-hide');
+            this.cancelButton.removeClass('mphb-hide').prop('disabled', false);
+        },
+
+        afterCancel: function () {
+            this.cancelButton.addClass('mphb-hide').prop('disabled', true);
+            this.progressBar.addClass('mphb-wait');
+            this.setProgress(100, this.messages.cancelling);
+        },
+
+        afterEnd: function () {
+            this.submitButton.prop('disabled', false);
+            this.preloader.addClass('mphb-hide');
+            this.progressBar.addClass('mphb-hide');
+            this.cancelButton.addClass('mphb-hide').prop('disabled', true);
+        },
+
+        getValues: function () {
+            var values = {};
+
+            values['room']       = this.rooms.val();
+            values['status']     = this.statuses.val();
+            values['start_date'] = this.startDate.val();
+            values['end_date']   = this.endDate.val();
+            values['search_by']  = this.searchBy.val();
+            values['columns']    = $.map(this.exportColumns.filter(':checked'), function (element) { return element.value; });
+
+            if (values.columns.length == 0) {
+                values.columns = 'none'; // Otherwise $.ajax() will lose the field
+            }
+
+            return values;
+        },
+
+        ".mphb-toggle-export-columns click": function (element, event) {
+            event.preventDefault();
+            this.columnsFieldset.toggleClass('mphb-hide');
+        },
+
+        ".mphb-checkbox-select-all click": function (element, event) {
+            event.preventDefault();
+            this.exportColumns.filter(':not(:checked)').prop('checked', true);
+        },
+
+        ".mphb-checkbox-unselect-all click": function (element, event) {
+            event.preventDefault();
+            this.exportColumns.filter(':checked').prop('checked', false);
+        }
+    }
+);
+
 /**
  * @see MPHBAdmin.format_price() in public/mphb.js
  */
@@ -1861,6 +2156,51 @@ MPHBAdmin.VariablePricingCtrl = MPHBAdmin.Ctrl.extend( {}, {
 		}
 
         new MPHBAdmin.ServiceQuantity('.post-type-mphb_room_service #mphb_price');
+
+        new MPHBAdmin.ExportBookings('#mphb-export-bookings-form');
+
+        // Add checkbox "Display imported bookings in this table" on bookings page
+        var pluginData = MPHBAdmin.Plugin.myThis.data;
+
+        if (pluginData.settings.displayImportCheckbox) {
+            var listTable = $('#posts-filter .wp-list-table');
+
+            if (listTable.length > 0) {
+                var checkboxLabel = pluginData.translations.displayImport;
+                var checkedAttr = pluginData.settings.displayImport ? 'checked="checked"' : '';
+
+                var appendHtml = '<p id="mphb-display-import-control"><label>'
+                    + '<input type="checkbox" id="mphb-display-imported-bookings" ' + checkedAttr + ' /> ' + checkboxLabel
+                    + '<span class="mphb-preloader mphb-hide"></span>'
+                    + '</label></p>';
+
+                $(appendHtml).insertBefore(listTable);
+
+                $('#mphb-display-imported-bookings').change(function () {
+                    var self = $(this);
+                    var value = self.prop('checked');
+
+                    self.siblings('.mphb-preloader').removeClass('mphb-hide');
+                    self.prop('disabled', true);
+
+                    $.ajax({
+                        url: pluginData.ajaxUrl,
+                        type: 'POST',
+                        dataType: 'json',
+                        data: {
+                            action: 'mphb_display_imported_bookings',
+                            mphb_nonce: pluginData.nonces.mphb_display_imported_bookings,
+                            new_value: value,
+                            user_id: pluginData.settings.userId
+                        },
+                        complete: function () {
+                            location.reload(true);
+                        }
+                    });
+                }); // On change
+            } // if (listTable.length > 0)
+        } // if (displayImportCheckbox)
+
 	} );
 	} );
 })( jQuery );

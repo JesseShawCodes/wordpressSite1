@@ -15,6 +15,10 @@ class Ajax {
 	protected $actionPrefix	 = 'mphb_';
 	protected $ajaxActions	 = array(
 		// Admin
+        'display_imported_bookings'  => array(
+            'method' => 'POST',
+            'nopriv' => false
+        ),
 		'recalculate_total'			 => array(
 			'method' => 'POST',
 			'nopriv' => false
@@ -158,6 +162,29 @@ class Ajax {
 		}
 		return $nonces;
 	}
+
+
+    public function display_imported_bookings()
+    {
+        $this->verifyNonce(__FUNCTION__);
+
+        $input = $this->retrieveInput(__FUNCTION__);
+
+        if (!isset($input['new_value']) || !isset($input['user_id'])) {
+            wp_send_json_error(array(
+                'message' => __('Please complete all required fields and try again.', 'motopress-hotel-booking')
+            ));
+        }
+
+        $newValue = Utils\ValidateUtils::validateBool($input['new_value']);
+        $userId = Utils\ValidateUtils::parseInt($input['user_id']);
+
+        if ($userId > 0) {
+            MPHB()->settings()->main()->displayImportedBookings($userId, $newValue);
+        }
+
+        wp_send_json_success();
+    }
 
 	public function recalculate_total(){
 
@@ -307,7 +334,7 @@ class Ajax {
 		$checkInDate = $this->parseCheckInDate( $input['check_in_date'] );
 		$checkOutDate = $this->parseCheckInDate( $input['check_out_date'] );
 
-		$occupancyParams = mphb_occupancy_parameters( array(
+        MPHB()->reservationRequest()->setupParameters( array(
 			'adults' => $adults,
 			'children' => $children,
 			'check_in_date' => $checkInDate,
@@ -323,7 +350,7 @@ class Ajax {
 				continue;
 			}
 
-			$price = $rate->calcPrice( $checkInDate, $checkOutDate, $occupancyParams );
+			$price = $rate->calcPrice( $checkInDate, $checkOutDate );
 			$prices[$rateId] = mphb_format_price( $price );
 		}
 

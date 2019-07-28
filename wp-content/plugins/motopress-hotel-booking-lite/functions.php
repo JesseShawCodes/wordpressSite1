@@ -467,11 +467,6 @@ function mphb_generate_uid(){
 	return mphb_generate_uuid4() . '@' . mphb_current_domain();
 }
 
-function mphb_is_imported_uid($uid)
-{
-    return !empty($uid) && strpos($uid, '@' . mphb_current_domain()) === false;
-}
-
 /**
  * Retrieves the edit post link for post regardless current user capabilities
  *
@@ -554,36 +549,26 @@ function mphb_show_multiple_instances_notice(){
 	echo wp_kses_post( $html_message );
 }
 
-function mphb_upgrade_to_premium_message( $before = '', $after = '' ){
-	$message = __( '<a href="%s">Upgrade to Premium</a> to enable this feature.', 'motopress-hotel-booking' );
-	$message = sprintf( $message, esc_url( admin_url( 'admin.php?page=mphb_premium' ) ) );
-	$message = $before . $message . $after;
+/**
+ * @param string $wrapper Optional. Wrapper tag - "span" or "div". "span" by
+ *     default. Pass the empty value to remove the wrapper
+ * @param string $wrapperClass Optional. "description" by default.
+ * @return string "Upgrade to Premium..." HTML.
+ */
+function mphb_upgrade_to_premium_message($wrapper = 'span', $wrapperClass = 'description')
+{
+	$message = __('<a href="%s">Upgrade to Premium</a> to enable this feature.', 'motopress-hotel-booking');
+	$message = sprintf($message, esc_url(admin_url('admin.php?page=mphb_premium')));
+
+    if (!empty($wrapper)) {
+        if ($wrapper === 'div') {
+            $message = '<div class="' . esc_attr($wrapperClass) . '">' . $message . '</div>';
+        } else {
+            $message = '<span class="' . esc_attr($wrapperClass) . '">' . $message . '</span>';
+        }
+    }
+
 	return $message;
-}
-
-function mphb_occupancy_parameters( $atts = array() ){
-	$search = MPHB()->searchParametersStorage()->get();
-	/** @var int|string Adults count or empty string. */
-	$searchAdults = is_numeric( $search['mphb_adults'] ) ? (int)$search['mphb_adults'] : $search['mphb_adults'];
-	/** @var int|string Adults count or empty string. */
-	$searchChildren = is_numeric( $search['mphb_children'] ) ? (int)$search['mphb_children'] : $search['mphb_children'];
-
-	if ( isset( $atts['check_in_date'], $atts['check_out_date'] ) ) {
-		$nightsCount = \MPHB\Utils\DateUtils::calcNights( $atts['check_in_date'], $atts['check_out_date'] );
-	} else {
-		$nightsCount = -1;
-	}
-
-	$params = array(
-		/** @var int|string Adults count or empty string. */
-		'adults'		 => isset( $atts['adults'] ) ? $atts['adults'] : $searchAdults,
-		/** @var int|string Children count or empty string. */
-		'children'		 => isset( $atts['children'] ) ? $atts['children'] : $searchChildren,
-		/** @var int Can be negative number (wrong dates or no dates at all). */
-		'nights_count'	 => $nightsCount
-	);
-
-	return $params;
 }
 
 /**
@@ -810,4 +795,47 @@ function mphb_fix_blocks_autop()
             return wpautop($content);
         });
     }
+}
+
+/**
+ * @param string $json JSON string with possibly escaped Unicode symbols (\uXXXX).
+ * @return string JSON string with escaped Unicode symbols (\\uXXXX).
+ */
+function mphb_escape_json_unicodes($json)
+{
+    return preg_replace('/(\\\\u[0-9a-f]{4})/i', '\\\\$1', $json);
+}
+
+/**
+ * @return string "/path/to/wordpress/wp-content/uploads/mphb/"
+ */
+function mphb_uploads_dir()
+{
+    $uploads = wp_upload_dir();
+    return trailingslashit($uploads['basedir']) . 'mphb/';
+}
+
+function mphb_create_uploads_dir()
+{
+    $dir = mphb_uploads_dir();
+
+    if (file_exists($dir)) {
+        return;
+    }
+
+    // Create .../uploads/mphb/
+    wp_mkdir_p($dir);
+
+    // Create .../uploads/mphb/index.php
+    @file_put_contents($dir . 'index.php', '<?php' . PHP_EOL);
+
+    // Create .../uploads/mphb/.htaccess
+    $htaccess = "Options -Indexes\n"
+        . "deny from all\n"
+        . "<FilesMatch '\.(jpg|jpeg|png|gif|mp3|ogg)$'>\n"
+        . "Order Allow,Deny\n"
+        . "Allow from all\n"
+        . "</FilesMatch>\n";
+
+    @file_put_contents($dir . '.htaccess', $htaccess);
 }

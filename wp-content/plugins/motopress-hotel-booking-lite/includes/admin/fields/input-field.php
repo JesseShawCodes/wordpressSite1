@@ -130,6 +130,10 @@ abstract class InputField {
 		$this->name = $name;
 	}
 
+	public function getDescription(){
+		return $this->description;
+	}
+
 	public function setDescription( $description ){
 		$this->description = $description;
 	}

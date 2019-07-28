@@ -1,8 +1,8 @@
-=== Hotel Booking Lite ===
+﻿=== Hotel Booking Lite ===
 Contributors: MotoPress
 Donate link: https://motopress.com/
-Tags: hotel booking, reservation, hotel, booking engine, booking
-Requires at least: 4.0
+Tags: hotel booking, reservation, hotel, booking engine, booking, booking calendar, booking system
+Requires at least: 4.6
 Tested up to: 5.2
 Stable tag: trunk
 License: GPLv2 or later
@@ -11,23 +11,23 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 The #1 Hotel Booking and Vacation Rental Plugin for WordPress. Online payments, seasons, rates, free or paid extras, coupons, taxes & fees.
 
 == Description ==
-MotoPress Hotel Booking plugin is the ultimate WordPress property rental system with a real lodging business in mind.
+Hotel Booking plugin by MotoPress is the ultimate WordPress property rental system with a real lodging business in mind.
 
 * [Plugin Demo](https://hbdemo.getmotopress.com/)
 * [Video Guides](https://www.youtube.com/playlist?list=PLbDImkyrISyKQccIsVDp98UXLIc1Yc3mn)
 * [Docs](https://motopress.com/files/motopress-hotel-booking-plugin-documentation.pdf) - step-by-step guides to set up and manage the plugin.
 
-Using this reservation plugin, you can create a simple vacation rental listing as well as a powerful rental property booking website with all sorts of online and offline payments, automatic inventory control, taxes and fees info, flexible pricing rates, custom policies and more.
+Using this WP hotel booking reservation plugin, you can create a simple vacation rental listing as well as a powerful rental property booking website with all sorts of online and offline payments, automatic inventory control, taxes and fees info, flexible pricing rates, custom policies and more.
 
 This WordPress booking system was developed for hotel and vacation rental owners, B&B hosts, real estate agencies, and anyone in the lodging sector of the hospitality industry. Hotel Booking is a standalone plugin that will help you create a stunning rental property website with any WordPress theme and switch it with peace in mind if needed.
 
-The admin dashboard is absolutely user-friendly making it easy to create a hotel or property renting website for non-tech people.
+The admin dashboard of WordPress hotel plugin is absolutely user-friendly making it easy to create a hotel or property renting website for non-tech people.
 
 Get a better sense of how the plugin works:
 
 [youtube https://www.youtube.com/watch?v=TmKqVH7o8ds]
 
-= General plugin features: =
+= General wp hotel booking plugin features: =
 
 * It can handle unlimited properties (or unlimited rooms in a hotel).
 * Structured property details: description, a photo gallery, amenities, services, a view, bed types, max occupancy, property size and more.
@@ -87,9 +87,9 @@ Get a better sense of how the plugin works:
 
 Have a look at all Pro [plugin features](https://motopress.com/motopress-wordpress-hotel-booking-pro-vs-lite/?utm_source=wp-org&utm_medium=pro-features&utm_campaign=hotel-booking-lite&utm_content=here).
 
-= Hotel & Property Rental WordPress Themes =
+= Hotel and Vacation Rental WordPress Themes =
 
-Check out our [Hotel & Property Rental WordPress Themes](https://motopress.com/products/category/hotel-rental-wordpress-themes/?utm_source=wp-org&utm_medium=hotel-themes&utm_campaign=hotel-booking-lite&utm_content=wordpress-hotel-themes) where the Pro version of the [WordPress Booking Plugin](https://motopress.com/products/hotel-booking/?utm_source=wp-org&utm_medium=pro-link&utm_campaign=hotel-booking-lite&utm_content=wordpress-booking-plugin) is included for free.
+Check out our [Hotel and Vacation Rental WordPress Themes](https://motopress.com/products/category/hotel-rental-wordpress-themes/?utm_source=wp-org&utm_medium=hotel-themes&utm_campaign=hotel-booking-lite&utm_content=wordpress-hotel-themes) where the Pro version of the [WordPress Booking Plugin](https://motopress.com/products/hotel-booking/?utm_source=wp-org&utm_medium=pro-link&utm_campaign=hotel-booking-lite&utm_content=wordpress-booking-plugin) is included for free.
 
 You may also use the Palmeria [free hotel booking theme](https://wordpress.org/themes/palmeria/) with the built-in Hotel Booking Lite plugin. 
 
@@ -131,6 +131,29 @@ Hotel Booking Lite plugin is distributed under the terms of the GNU GPL.
 
 
 == Changelog ==
+
+= 3.5.1, Jun 25 2019 =
+* Improved compatibility with WPML plugin.
+* Improved compatibility with PHP 7.3.
+* Improved compatibility with MySQL 8.
+* Added the ability to sort bookings by check-in / check-out date in the Bookings table.
+
+= 3.5.0, Jun 17 2019 =
+* Added the ability to export bookings data in the CSV format.
+* Added the ability to preset the first value of the Attributes list instead of an empty string for the search form field.
+* Fixed the issue with incorrect results when searching through Attributes.
+* Fixed the issue at checkout when a variable price was displayed instead of the base one.
+* Fixed the issue with the Price Breakdown table encoding.
+* Fixed the issue when the room_type_categories was displayed as Array.
+* Improved management of the variable pricing: it is now possible to add price variations in a random order.
+* Added css classes for the Price Breakdown table.
+* Updated the list of available currencies for PayPal.
+
+= 3.4.0, May 22 2019 =
+* Major improvements on booking synchronization with online channels via iCal interface.
+* Added option for filtering and hiding imported bookings in the Bookings table. 
+* Added option for including Blocked Accommodations to exportable calendars.
+* Minor bugfixes and improvements.
 
 = 3.3.0, Apr 5 2019 =
 * Improved compatibility with WPML plugin.

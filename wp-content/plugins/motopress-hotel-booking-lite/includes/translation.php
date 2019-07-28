@@ -10,13 +10,13 @@ class Translation {
 	 *
 	 * @var string
 	 */
-	private $beforeEmailLanguage;
+	private $restoreAfterEmail = false;
 
 	/**
 	 *
 	 * @var string
 	 */
-	private $storedLanguage;
+	private $restoreLanguage = null;
 
 	/**
 	 *
@@ -112,7 +112,9 @@ class Translation {
 //		}
 
 		if ( $adminLanguage !== $this->getCurrentLanguage() ) {
-			$this->beforeEmailLanguage = $this->getCurrentLanguage();
+            $this->restoreAfterEmail = true;
+            $this->restoreLanguage = $this->getRestoreLanguage();
+
 			$this->switchLanguage( $adminLanguage );
 		}
 
@@ -131,7 +133,9 @@ class Translation {
 		}
 
 		if ( $language !== $this->getCurrentLanguage() ) {
-			$this->beforeEmailLanguage = $this->getCurrentLanguage();
+            $this->restoreAfterEmail = true;
+            $this->restoreLanguage = $this->getRestoreLanguage();
+
 			$this->switchLanguage( $language );
 		}
 
@@ -173,10 +177,10 @@ class Translation {
 	 * @param Entities\Booking $booking
 	 */
 	public function resetLanguageAfterEmail( $booking ){
-		if ( !is_null( $this->beforeEmailLanguage ) ) {
-			$this->switchLanguage( $this->beforeEmailLanguage );
+		if ( $this->restoreAfterEmail ) {
+			$this->switchLanguage( $this->restoreLanguage );
 			$this->updateTextdomains();
-			$this->beforeEmailLanguage = null;
+			$this->restoreAfterEmail = false;
 		}
 	}
 
@@ -190,17 +194,17 @@ class Translation {
 	}
 
 	public function setupDefaultLanguage(){
-		$this->storedLanguage = $this->getCurrentLanguage();
+        $this->restoreLanguage = $this->getRestoreLanguage();
 		$this->switchLanguage( $this->getDefaultLanguage() );
 	}
 
 	public function setupAllLanguages(){
-		$this->storedLanguage = $this->getCurrentLanguage();
+        $this->restoreLanguage = $this->getRestoreLanguage();
 		$this->switchLanguage( 'all' );
 	}
 
 	public function restoreLanguage(){
-		$this->switchLanguage( $this->storedLanguage );
+		$this->switchLanguage( $this->restoreLanguage );
 	}
 
 	/**
@@ -250,12 +254,11 @@ class Translation {
 			return;
 		}
 
-		$this->currentLanguage	 = $this->getCurrentLanguage();
-		$originalLanguage		 = $this->getDefaultLanguage();
+        $this->restoreLanguage = $this->getRestoreLanguage();
 
 		switch ( $atts['mphb_language'] ) {
 			case 'original':
-				$toLanguage	 = $originalLanguage;
+				$toLanguage	 = $this->getDefaultLanguage();
 				break;
 			default:
 				$toLanguage	 = $atts['mphb_language'];
@@ -271,7 +274,7 @@ class Translation {
 			return;
 		}
 
-		$this->switchLanguage( $this->currentLanguage );
+		$this->switchLanguage( $this->restoreLanguage );
 	}
 
 	public function switchLanguage( $language = null ){
@@ -300,6 +303,28 @@ class Translation {
 	public function wpmlTranslatePostId( $id, $language = null ){
 		return $this->translateId( $id, null, $language );
 	}
+
+    /**
+     * Use the function before changing the site language. Otherwise
+     * getCurrentLanguage() will return wrong value.
+     *
+     * @return string Language code like "en", "uk", "ru" etc.
+     */
+    protected function getRestoreLanguage()
+    {
+        if (is_admin()) {
+            $locale = get_user_meta(get_current_user_id(), 'locale', true);
+
+            if (empty($locale)) {
+                return $this->getDefaultLanguage();
+            } else {
+                $language = explode('_', $locale); // "en" => ["en"], "ru_RU" -> ["ru", "RU"]
+                return $language[0];
+            }
+        } else {
+            return $this->getCurrentLanguage();
+        }
+    }
 
 	/**
 	 *

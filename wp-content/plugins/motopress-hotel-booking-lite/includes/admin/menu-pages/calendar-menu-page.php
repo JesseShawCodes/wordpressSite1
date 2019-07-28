@@ -9,7 +9,7 @@ class CalendarMenuPage extends AbstractMenuPage {
 	public function addActions(){
 		parent::addActions();
 
-		$this->addTitleAction( __( 'New Booking', 'motopress-hotel-booking' ), '#', array( 'class' => 'button-disabled', 'after' => mphb_upgrade_to_premium_message( '<span class="description">', '</span>' ) ) );
+		$this->addTitleAction( __( 'New Booking', 'motopress-hotel-booking' ), '#', array( 'class' => 'button-disabled', 'after' => mphb_upgrade_to_premium_message() ) );
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminScripts' ), 15 );
 	}

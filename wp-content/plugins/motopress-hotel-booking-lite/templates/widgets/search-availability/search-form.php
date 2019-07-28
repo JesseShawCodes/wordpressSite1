@@ -119,7 +119,7 @@ if ( !defined( 'ABSPATH' ) ) {
 				</label>
 				<br />
 				<select id="<?php echo esc_attr( 'mphb_' . $attributeName . '-' . $uniqid ); ?>" name="<?php echo esc_attr( 'mphb_attributes[' . $attributeName . ']' ); ?>">
-					<option value=""><?php _ex( '&mdash;', 'Not selected value in the search form.', 'motopress-hotel-booking' ); ?></option>
+					<option value=""><?php echo mphb_attribute_default_text( $attributeName ); ?></option>
 					<?php foreach ( $terms as $termId => $termLabel ) { ?>
 						<option value="<?php echo esc_attr( $termId ); ?>"><?php echo esc_html( $termLabel ); ?></option>
 					<?php } ?>

@@ -96,6 +96,23 @@ class Booking {
 	 */
 	private $checkoutId = '';
 
+    /**
+     * Identifies the source calendar of the imported booking. "Outdated" for
+     * all bookings imported before v3.4.0.
+     *
+     * @var string
+     *
+     * @see Task MB-906.
+     */
+    protected $syncId = '';
+
+    /**
+     * In which queue we imported this booking.
+     *
+     * @var int
+     */
+    protected $syncQueueId = 0;
+
 	/**
 	 *
 	 * @param array $atts
@@ -203,6 +220,16 @@ class Booking {
 		if ( isset( $atts['checkout_id'] ) ) {
 			$this->checkoutId = $atts['checkout_id'];
 		}
+
+        // If booking has such meta value and meta value is not empty - then the
+        // booking is imported
+        if ( isset( $atts['sync_id'] ) ) {
+            $this->syncId = $atts['sync_id'];
+        }
+
+        if ( !empty( $atts['sync_queue_id'] ) ) {
+            $this->syncQueueId = intval( $atts['sync_queue_id'] );
+        }
 	}
 
 	/**
@@ -222,6 +249,17 @@ class Booking {
 	public function updateTotal(){
 		$this->totalPrice = $this->calcPrice();
 	}
+
+    /**
+     * @return array|null
+     */
+    public function getLastPriceBreakdown()
+    {
+        $prices = get_post_meta($this->id, '_mphb_booking_price_breakdown', true);
+        $prices = json_decode($prices, true);
+
+        return $prices;
+    }
 
 	/**
 	 *
@@ -309,6 +347,10 @@ class Booking {
 		$deposit = $total;
 
 		if ( MPHB()->settings()->payment()->getAmountType() === 'deposit' ) {
+
+            if ( !apply_filters( 'mphb_booking_deposit_is_appliable', true, $this ) ) {
+                return $deposit;
+            }
 
 			$depositAmount = (float) MPHB()->settings()->payment()->getDepositAmount();
 
@@ -578,17 +620,22 @@ class Booking {
 		return $this->checkoutId;
 	}
 
-	/**
-	 *
-	 * @return bool
-	 */
-	public function isImported(){
-		$roomsTotal = count( $this->reservedRooms );
-		$roomsImported = array_reduce( $this->reservedRooms, function( $count, \MPHB\Entities\ReservedRoom $room ){
-			return $room->getRateId() == 0 ? $count + 1 : $count;
-		}, 0 );
+    public function getSyncId()
+    {
+        return $this->syncId;
+    }
 
-		return $roomsTotal > 0 && $roomsImported == $roomsTotal;
-	}
+    public function getSyncQueueId()
+    {
+        return $this->syncQueueId;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isImported()
+    {
+        return !empty($this->syncId);
+    }
 
 }

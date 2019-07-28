@@ -803,3 +803,42 @@ function mphb_tmpl_the_payments_table($booking)
 
     printf('<a href="%1$s" class="button button-primary">%2$s</a>', esc_url($createManualPaymentUrl), __('Add Payment Manually', 'motopress-hotel-booking'));
 }
+
+function mphb_tmpl_select_html($args, $options, $selected)
+{
+    $args = array_map(function ($attribute, $value) {
+        return $attribute . '="' . esc_attr($value) . '"';
+    }, array_keys($args), $args);
+
+    echo '<select ' . implode(' ', $args) . '>';
+
+    foreach ($options as $value => $label) {
+        echo '<option value="' . esc_attr($value) . '"' . selected($selected, $value, false) . '>';
+        echo esc_html($label);
+        echo '</option>';
+    }
+
+    echo '</select>';
+}
+
+function mphb_tmpl_multicheck_html($name, $options, $selected)
+{
+    if (substr($name, -2) != '[]') {
+        $name .= '[]';
+    }
+
+    foreach ($options as $value => $label) {
+        $isChecked = in_array($value, $selected);
+
+        echo '<label>';
+        echo '<input name="' . esc_attr($name) . '" value="' . esc_attr($value) . '" type="checkbox"' . checked(true, $isChecked, false) . ' />';
+        echo ' ' . esc_html($label);
+        echo '</label>';
+
+        echo '<br />';
+    }
+
+    echo '<button class="button-link mphb-checkbox-select-all">' . __('Select all', 'motopress-hotel-booking') . '</button>';
+    echo ' - ';
+    echo '<button class="button-link mphb-checkbox-unselect-all">' . __('Unselect all', 'motopress-hotel-booking') . '</button>';
+}

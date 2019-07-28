@@ -201,7 +201,7 @@ class SettingsMenuPage extends AbstractMenuPage {
 
 		$bookingConfirmationFields = array(
 			Fields\FieldFactory::create( 'mphb_confirmation_mode', array(
-				'type'		 => 'select',
+				'type'		 => 'radio',
 				'label'		 => __( 'Confirmation Mode', 'motopress-hotel-booking' ),
 				'list'		 => array(
 					'auto'		 => __( 'By customer via email', 'motopress-hotel-booking' ),
@@ -338,9 +338,26 @@ class SettingsMenuPage extends AbstractMenuPage {
         $this->filterGroupFields($displayFields, $displayGroup->getName());
 		$displayGroup->addFields( $displayFields );
 
+        $iCalGroup = new Groups\SettingsGroup( 'mphb_ical_parameters', __( 'Calendars Synchronization', 'motopress-hotel-booking' ), $generalTab->getOptionGroupName() );
+        $iCalFields = array(
+            Fields\FieldFactory::create( 'mphb_ical_export_blocks', array(
+                'type'           => 'checkbox',
+                'default'        => false,
+                'inner_label'    => __( 'Export admin blocks.', 'motopress-hotel-booking' )
+            ) ),
+            Fields\FieldFactory::create( 'mphb_ical_dont_export_imports', array(
+                'type'           => 'checkbox',
+                'default'        => true,
+                'inner_label'    => __( "Do not export imported bookings.", 'motopress-hotel-booking' )
+            ) )
+        );
+
+        $this->filterGroupFields( $iCalFields, $iCalGroup->getName() );
+        $iCalGroup->addFields( $iCalFields );
+
 		$iCalSyncGroup = new Groups\SettingsGroup( 'mphb_ical_auto_sync_parameters', __( 'Calendars Synchronization Scheduler', 'motopress-hotel-booking' ), $generalTab->getOptionGroupName() );
 		$iCalSyncFields = array(
-			Fields\FieldFactory::create( 'mphb_ical_auto_sync_upgrade', array( 'type' => 'placeholder', 'description' => mphb_upgrade_to_premium_message() ) ),
+			Fields\FieldFactory::create( 'mphb_ical_auto_sync_upgrade', array( 'type' => 'placeholder', 'description' => mphb_upgrade_to_premium_message( false ) ) ),
 			Fields\FieldFactory::create( 'mphb_ical_auto_sync_enable', array(
 				'type'			 => 'checkbox',
 				'disabled'		 => true,
@@ -396,6 +413,7 @@ class SettingsMenuPage extends AbstractMenuPage {
 		$generalTab->addGroup( $miscGroup );
 		$generalTab->addGroup( $bookingDisablingGroup );
 		$generalTab->addGroup( $displayGroup );
+        $generalTab->addGroup( $iCalGroup );
 		$generalTab->addGroup( $iCalSyncGroup );
         $generalTab->addGroup( $editorGroup );
 
@@ -677,7 +695,7 @@ class SettingsMenuPage extends AbstractMenuPage {
 		add_action( 'admin_init', array( $this, 'initFields' ) );
 		add_action( 'admin_init', array( $this, 'registerSettings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminScripts' ) );
-        add_action( 'admin_notices', array( $this, 'renderNotices' ) );
+        add_action( 'admin_notices', array( $this, 'renderNotices' ), 186400 );
 	}
 
 	public function enqueueAdminScripts(){
@@ -721,8 +739,8 @@ class SettingsMenuPage extends AbstractMenuPage {
         $paymentMethod = MPHB()->settings()->main()->getConfirmationMode();
 
         if ($activeTab == 'payments' && $paymentMethod != 'payment') {
-            echo '<div class="notice notice-info">';
-            echo '<p>', __('Payment methods will appear on the checkout page only when Confirmation Upon Payment is enabled in Accommodation > Settings > General > Confirmation Mode.', 'motopress-hotel-booking'), '</p>';
+            echo '<div class="notice notice-warning">';
+            echo '<p>', __('<strong>Note:</strong> Payment methods will appear on the checkout page only when Confirmation Upon Payment is enabled in Accommodation > Settings > General > Confirmation Mode.', 'motopress-hotel-booking'), '</p>';
             echo '</div>';
         }
     }
@@ -739,7 +757,13 @@ class SettingsMenuPage extends AbstractMenuPage {
 	 */
 	private function detectSubTab(){
 		$tab = $this->detectTab();
-		return isset( $this->tabs[$tab] ) ? $this->tabs[$tab]->detectSubTab() : '';
+		$tab = isset( $this->tabs[$tab] ) ? $this->tabs[$tab]->detectSubTab() : '';
+
+        if (empty($tab)) {
+            $tab = isset($_GET['subtab']) ? sanitize_text_field($_GET['subtab']) : '';
+        }
+
+        return $tab;
 	}
 
 	public function save(){

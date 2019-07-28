@@ -6,7 +6,6 @@ use MPHB\iCal\BackgroundProcesses\QueuedSynchronizer;
 
 class Upgrader {
 
-	const OPTION_MIN_DB_VERSION		 = '1.0.1';
 	const OPTION_DB_VERSION			 = 'mphb_db_version';
 	const OPTION_DB_VERSION_HISTORY	 = 'mphb_db_version_history';
 
@@ -67,6 +66,14 @@ class Upgrader {
 		),
         '3.2.0' => array(
             'fixForV3_2_0'
+        ),
+        '3.4.0' => array(
+            'markImported',
+            'improveStats',
+            'moveSyncUrls'
+        ),
+        '3.5.0' => array(
+            'createUploadsDir'
         )
 	);
 
@@ -87,14 +94,17 @@ class Upgrader {
 	}
 
 	public function checkVersion(){
-		$dbVersion = $this->bgUpgrader->is_in_progress() ? $this->getScheduledVersion() : $this->getCurrentDBVersion();
+		$dbVersion = $this->bgUpgrader->isInProgress() ? $this->getScheduledVersion() : $this->getCurrentDBVersion( true );
 
-		if ( version_compare( MPHB()->getVersion(), $dbVersion, '>' ) ) {
+        if ( is_null( $dbVersion ) ) {
+            $this->updateDBVersion();
+
+        } else if ( version_compare( MPHB()->getVersion(), $dbVersion, '>' ) ) {
 			$this->isNeedUpgrade = true;
-		}
 
-		if ( version_compare( '2.0.0', $this->getCurrentDBVersion(), '>' ) ) {
-			$this->blockNewBookings();
+            if ( version_compare( '2.0.0', $this->getCurrentDBVersion(), '>' ) ) {
+                $this->blockNewBookings();
+            }
 		}
 	}
 
@@ -133,17 +143,17 @@ class Upgrader {
 
 	public function maybeForceUpgrade(){
 		if ( isset( $_GET['mphb_force_upgrade'] ) && $_GET['mphb_force_upgrade'] ) {
-			do_action( $this->bgUpgrader->get_identifier() . '_cron' );
-			do_action( $this->bgBookingUpgrader2_0_0->get_identifier() . '_cron' );
-			do_action( $this->bgBookingUpgrader2_2_0->get_identifier() . '_cron' );
-			do_action( $this->bgBookingUpgrader2_3_0->get_identifier() . '_cron' );
+			do_action( $this->bgUpgrader->getIdentifier() . '_cron' );
+			do_action( $this->bgBookingUpgrader2_0_0->getIdentifier() . '_cron' );
+			do_action( $this->bgBookingUpgrader2_2_0->getIdentifier() . '_cron' );
+			do_action( $this->bgBookingUpgrader2_3_0->getIdentifier() . '_cron' );
 			wp_safe_redirect( admin_url() );
 			exit;
 		}
 	}
 
 	public function showUpgradeNotice(){
-		if ( $this->bgUpgrader->is_in_progress() ) {
+		if ( $this->bgUpgrader->isInProgress() ) {
 
 			// fix for bug with extra batches lead to negative procent
 			$totalQueueSize		 = max( $this->getTotalQueueSize(), $this->getQueueSize() );
@@ -194,7 +204,7 @@ class Upgrader {
 	 */
 	public function fixForV2_0_0(){
 
-		if ( $this->bgBookingUpgrader2_0_0->is_in_progress() ) {
+		if ( $this->bgBookingUpgrader2_0_0->isInProgress() ) {
 			$this->bgUpgrader->pause();
 			return __FUNCTION__;
 		}
@@ -231,7 +241,7 @@ class Upgrader {
 
 		$this->setTotalQueueSize( $this->getTotalQueueSize() + count( $oldBookingsChunked ) );
 
-		$this->bgUpgrader->wait_action( $this->bgBookingUpgrader2_0_0->get_identifier() . '_complete' );
+		$this->bgUpgrader->waitAction( $this->bgBookingUpgrader2_0_0->getIdentifier() . '_complete' );
 
 		$this->bgBookingUpgrader2_0_0->dispatch();
 
@@ -248,7 +258,7 @@ class Upgrader {
 	 */
 	public function fixForV2_2_0(){
 
-		if ( $this->bgBookingUpgrader2_2_0->is_in_progress() ) {
+		if ( $this->bgBookingUpgrader2_2_0->isInProgress() ) {
 			$this->bgUpgrader->pause();
 			return __FUNCTION__;
 		}
@@ -283,7 +293,7 @@ class Upgrader {
 
 		$this->setTotalQueueSize( $this->getTotalQueueSize() + count( $batches ) );
 
-		$this->bgUpgrader->wait_action( $this->bgBookingUpgrader2_2_0->get_identifier() . '_complete' );
+		$this->bgUpgrader->waitAction( $this->bgBookingUpgrader2_2_0->getIdentifier() . '_complete' );
 
 		$this->bgBookingUpgrader2_2_0->dispatch();
 
@@ -325,7 +335,7 @@ class Upgrader {
 	 * @return string|boolean False when update completed, function name otherwise.
 	 */
 	public function fixForV2_3_0(){
-		if ( $this->bgBookingUpgrader2_3_0->is_in_progress() ) {
+		if ( $this->bgBookingUpgrader2_3_0->isInProgress() ) {
 			$this->bgUpgrader->pause();
 			return __FUNCTION__;
 		}
@@ -340,7 +350,7 @@ class Upgrader {
 
 		$this->setTotalQueueSize( $this->getTotalQueueSize() + 1 );
 
-		$this->bgUpgrader->wait_action( $this->bgBookingUpgrader2_3_0->get_identifier() . '_complete' );
+		$this->bgUpgrader->waitAction( $this->bgBookingUpgrader2_3_0->getIdentifier() . '_complete' );
 
 		$this->bgBookingUpgrader2_3_0->dispatch();
 
@@ -407,6 +417,8 @@ class Upgrader {
     	delete_option( 'mphb_booking_rules_reservation' );
 	    delete_option( 'mphb_booking_rules_seasons' );
 	    delete_option( 'mphb_booking_rules_season_priorities');
+
+		return false;
     }
 
 	/**
@@ -430,6 +442,8 @@ class Upgrader {
 
 		update_option( 'mphb_email_hotel_admin_email', $fromEmail );
 		update_option( 'mphb_email_from_email', '' );
+
+		return false;
 	}
 
     /**
@@ -441,6 +455,60 @@ class Upgrader {
 
         // Remove outdated sync logs
 		$wpdb->query("DELETE FROM {$wpdb->options} WHERE `option_name` = 'mphb_ical_sync_rooms_queue_processed_data'");
+
+		return false;
+    }
+
+    /**
+     * Mark imported bookings in version 3.4.0.
+     */
+    public function markImported()
+    {
+
+        return false;
+    }
+
+    /**
+     * Rename all columns from stat_* to import_* and add clean_* columns.
+     */
+    public function improveStats()
+    {
+        global $wpdb;
+
+        $wpdb->query("ALTER TABLE {$wpdb->prefix}mphb_sync_stats"
+            . " CHANGE COLUMN stat_total import_total INT NOT NULL DEFAULT 0,"
+            . " CHANGE COLUMN stat_succeed import_succeed INT NOT NULL DEFAULT 0,"
+            . " CHANGE COLUMN stat_skipped import_skipped INT NOT NULL DEFAULT 0,"
+            . " CHANGE COLUMN stat_failed import_failed INT NOT NULL DEFAULT 0,"
+            . " ADD clean_total INT NOT NULL DEFAULT 0,"
+            . " ADD clean_done INT NOT NULL DEFAULT 0,"
+            . " ADD clean_skipped INT NOT NULL DEFAULT 0");
+
+        return false;
+    }
+
+    public function moveSyncUrls()
+    {
+        global $wpdb;
+
+        // Create new table
+        $wpdb->query("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}mphb_sync_urls ("
+            . " url_id INT NOT NULL AUTO_INCREMENT,"
+            . " room_id INT NOT NULL,"
+            . " sync_id VARCHAR(32) NOT NULL,"
+            . " calendar_url VARCHAR(250) NOT NULL,"
+            . " PRIMARY KEY (url_id)"
+            . ") CHARSET=utf8 AUTO_INCREMENT=1");
+
+
+        return false;
+    }
+
+    public function createUploadsDir()
+    {
+        mphb_create_uploads_dir();
+
+        return false;
     }
 
 	/**
@@ -468,8 +536,9 @@ class Upgrader {
 	 *
 	 * @return string
 	 */
-	private function getCurrentDBVersion(){
-		return get_option( self::OPTION_DB_VERSION, self::OPTION_MIN_DB_VERSION );
+	private function getCurrentDBVersion( $returnNull = false ){
+        $defaultVersion = $returnNull ? null : MPHB()->getVersion();
+		return get_option( self::OPTION_DB_VERSION, $defaultVersion );
 	}
 
 	public function setScheduledVersion( $version = null ){
@@ -530,7 +599,7 @@ class Upgrader {
 	}
 
 	private function getQueueSize(){
-		return $this->bgUpgrader->get_queue_size() + $this->bgBookingUpgrader2_0_0->get_queue_size();
+		return $this->bgUpgrader->getQueueSize() + $this->bgBookingUpgrader2_0_0->getQueueSize();
 	}
 
 	public function complete(){

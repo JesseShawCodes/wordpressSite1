@@ -96,6 +96,29 @@ class SettingsTab {
 	}
 
 	/**
+	 * @param string $name Field name.
+     * @param int $groupIndex Optional. The group to search in. All (-1) by
+     * default.
+	 * @return \MPHB\Admin\Fields\InputField|null Searched field or null if
+	 * nothing found.
+	 */
+    public function findField($name, $groupIndex = -1)
+    {
+        $searchInGroups = $groupIndex >= 0 ? array($groupIndex) : array_keys($this->groups);
+
+        foreach ($searchInGroups as $groupIndex) {
+            $field = $this->groups[$groupIndex]->getFieldByName($name);
+
+            if (!is_null($field)) {
+                return $field;
+            }
+        }
+
+        // Nothing found
+        return null;
+    }
+
+	/**
 	 *
 	 * @return string
 	 */

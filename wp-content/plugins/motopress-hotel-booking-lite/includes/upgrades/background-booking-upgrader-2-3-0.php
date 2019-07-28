@@ -2,7 +2,7 @@
 
 namespace MPHB\Upgrades;
 
-class BackgroundBookingUpgrader_2_3_0 extends \MPHB\BackgroundProcess {
+class BackgroundBookingUpgrader_2_3_0 extends \MPHB\BackgroundPausableProcess {
 
 	/**
 	 *

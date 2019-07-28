@@ -67,17 +67,7 @@ abstract class AbstractPostRepository {
 
 		$posts = $this->persistence->getPosts( $atts );
 
-		do_action( "mphb_{$this->type}_repository_before_mapping_posts", $posts );
-
-		$entities = array_map( array( $this, 'mapPostToEntity' ), $posts );
-
-		$entities = array_filter( $entities );
-
-		foreach ( $entities as $entity ) {
-			$this->items[$entity->getId()] = $entity;
-		}
-
-		return $entities;
+		return $this->mapPostsToEntity( $posts );
 	}
 
 	/**
@@ -117,6 +107,20 @@ abstract class AbstractPostRepository {
 
 		return $deletedId;
 	}
+
+    protected function mapPostsToEntity($posts)
+    {
+        do_action("mphb_{$this->type}_repository_before_mapping_posts", $posts);
+
+        $entities = array_map(array($this, 'mapPostToEntity'), $posts);
+        $entities = array_filter($entities);
+
+        foreach ($entities as $entity) {
+            $this->items[$entity->getId()] = $entity;
+        }
+
+        return $entities;
+    }
 
 	abstract function mapPostToEntity( $post );
 

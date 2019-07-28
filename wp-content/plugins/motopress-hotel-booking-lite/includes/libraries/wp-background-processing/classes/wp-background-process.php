@@ -306,6 +306,8 @@ abstract class WP_Background_Process extends WP_Async_Request {
 					$batch->data[ $key ] = $task;
 				} else {
 					unset( $batch->data[ $key ] );
+					// Fork notice: used method after_task_done().
+					$this->after_task_done();
 				}
 
 				if ( $this->time_exceeded() || $this->memory_exceeded() ) {
@@ -314,8 +316,8 @@ abstract class WP_Background_Process extends WP_Async_Request {
 				}
 			}
 
-			// Update or delete current batch.
-			if ( ! empty( $batch->data ) ) {
+			// Update or delete current batch. Fork notice: added filter {identifier}_aborting.
+			if ( ! empty( $batch->data ) && ! apply_filters( $this->identifier . '_aborting', false ) ) {
 				$this->update( $batch->key, $batch->data );
 			} else {
 				$this->delete( $batch->key );
@@ -501,5 +503,8 @@ abstract class WP_Background_Process extends WP_Async_Request {
 	 * @return mixed
 	 */
 	abstract protected function task( $item );
+
+	// Fork notice: added method after_task_done().
+	protected function after_task_done() {}
 
 }

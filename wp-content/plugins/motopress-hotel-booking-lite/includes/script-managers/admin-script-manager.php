@@ -64,6 +64,7 @@ class AdminScriptManager extends ScriptManager {
 	public function getLocalizeData(){
 		$currencySymbol = MPHB()->settings()->currency()->getCurrencySymbol();
 		$currencyPosition = MPHB()->settings()->currency()->getCurrencyPosition();
+        $bookingManageCptPage = MPHB()->postTypes()->booking()->getManagePage();
 		$data = array(
 			'_data' => array(
 				'version'			 => MPHB()->getVersion(),
@@ -83,7 +84,10 @@ class AdminScriptManager extends ScriptManager {
 					'children'				 => __( 'Children: ', 'motopress-hotel-booking' ),
 					'removePeriod'			 => __( 'Remove', 'motopress-hotel-booking' ),
                     'bookingId'              => __( 'Booking #%s', 'motopress-hotel-booking' ),
-                    'bookingStatuses'        => MPHB()->postTypes()->booking()->statuses()->getLabels()
+                    'bookingStatuses'        => MPHB()->postTypes()->booking()->statuses()->getLabels(),
+                    'displayImport'          => __( 'Display imported bookings.', 'motopress-hotel-booking' ),
+                    'processing'             => __( 'Processing...', 'motopress-hotel-booking' ),
+                    'cancelling'             => __( 'Cancelling...', 'motopress-hotel-booking' )
 				),
 				'settings'			 => array(
 					'firstDay'					 => MPHB()->settings()->dateTime()->getFirstDay(),
@@ -92,13 +96,17 @@ class AdminScriptManager extends ScriptManager {
 					'dateFormat'				 => MPHB()->settings()->dateTime()->getDateFormatJS(),
 					'dateTransferFormat'		 => MPHB()->settings()->dateTime()->getDateTransferFormatJS(),
 					'datepickerClass'			 => MPHB()->settings()->main()->getDatepickerThemeClass(),
-					'upgradeToPremiumMsgHtml'	 => mphb_upgrade_to_premium_message( '<span class="description">', '</span>' ),
+					'upgradeToPremiumMsgHtml'	 => mphb_upgrade_to_premium_message(),
 					'currency'					 => array(
 						'price_format'				 => MPHB()->settings()->currency()->getPriceFormat( $currencySymbol, $currencyPosition ),
 						'decimals'					 => MPHB()->settings()->currency()->getPriceDecimalsCount(),
 						'decimal_separator'			 => MPHB()->settings()->currency()->getPriceDecimalsSeparator(),
 						'thousand_separator'		 => MPHB()->settings()->currency()->getPriceThousandSeparator()
-					)
+					),
+                    'displayImport'              => MPHB()->settings()->main()->displayImportedBookings(),
+                    'displayImportCheckbox'      => $bookingManageCptPage->isCurrentPage() && !$bookingManageCptPage->isImportedView(),
+                    'userId'                     => get_current_user_id(),
+                    'isExportingBookings'        => MPHB()->getBookingsExporter()->isInProgress()
 				)
 			),
 		);

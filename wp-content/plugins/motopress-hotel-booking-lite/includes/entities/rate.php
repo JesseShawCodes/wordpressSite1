@@ -159,17 +159,12 @@ class Rate {
 	}
 
 	/**
-	 *
-	 * @param array $occupancyParams Adults count, children count etc.
-	 *
 	 * @return array
-	 *
-	 * @see mphb_occupancy_parameters()
 	 */
-	public function getDatePrices( $occupancyParams = array() ){
+	public function getDatePrices(){
 		$datePrices = array();
 		foreach ( $this->seasonPrices as $seasonPrice ) {
-			$datePrices = array_merge( $datePrices, $seasonPrice->getDatePrices( $occupancyParams ) );
+			$datePrices = array_merge( $datePrices, $seasonPrice->getDatePrices() );
 		}
 		return $datePrices;
 	}
@@ -231,34 +226,24 @@ class Rate {
 	}
 
 	/**
-	 *
 	 * @param \DateTime $checkInDate
 	 * @param \DateTime $checkOutDate
-	 * @param array $occupancyParams Adults count, children count etc.
-	 *
 	 * @return float
-	 *
-	 * @see mphb_occupancy_parameters()
 	 */
-	public function calcPrice( \DateTime $checkInDate, \DateTime $checkOutDate, $occupancyParams = array() ){
-		return (float) array_sum( $this->getPriceBreakdown( $checkInDate, $checkOutDate, $occupancyParams ) );
+	public function calcPrice( \DateTime $checkInDate, \DateTime $checkOutDate ){
+		return (float) array_sum( $this->getPriceBreakdown( $checkInDate, $checkOutDate ) );
 	}
 
 	/**
-	 *
 	 * @param string $checkInDate date in format 'Y-m-d'
 	 * @param string $checkOutDate date in format 'Y-m-d'
-	 * @param array $occupancyParams Adults count, children count etc.
-	 *
 	 * @return array Array where keys are dates and values are prices
-	 *
-	 * @see mphb_occupancy_parameters()
 	 */
-	public function getPriceBreakdown( $checkInDate, $checkOutDate, $occupancyParams = array() ){
+	public function getPriceBreakdown( $checkInDate, $checkOutDate ){
 
 		$prices = array();
 
-		$datePrices = $this->getDatePrices( $occupancyParams );
+		$datePrices = $this->getDatePrices();
 
 		foreach ( \MPHB\Utils\DateUtils::createDatePeriod( $checkInDate, $checkOutDate ) as $date ) {
 			$dateDB = \MPHB\Utils\DateUtils::formatDateDB( $date );

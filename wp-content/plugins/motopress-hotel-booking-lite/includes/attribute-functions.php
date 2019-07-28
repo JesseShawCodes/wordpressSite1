@@ -147,6 +147,16 @@ function mphb_attribute_orderby( $attributeName ){
 	}
 }
 
+function mphb_attribute_default_text( $attributeName ){
+	global $mphbAttributes;
+
+	if ( isset( $mphbAttributes[$attributeName] ) ) {
+		return $mphbAttributes[$attributeName]['default_text'];
+	} else {
+		return _x( '&mdash;', 'Not selected value in the search form.', 'motopress-hotel-booking' );
+	}
+}
+
 /**
  * Note: this will reset order for all terms in range [1; oo) after first
  * reorder.

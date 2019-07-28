@@ -1,4 +1,4 @@
-.mphb-upload-import-details-wrapper .mphb-progress {
+.mphb-progress {
   position: relative;
   height: 28px;
   background-color: white;
@@ -6,14 +6,20 @@
   border-radius: 5px;
   overflow: hidden;
 }
-.mphb-upload-import-details-wrapper .mphb-progress__bar {
+.mphb-progress .mphb-progress__bar {
   display: block;
   width: 0%;
   height: 100%;
-  background: repeating-linear-gradient(45deg, #6ea6d1, #6ea6d1 10px, #88b6d9 10px, #88b6d9 20px);
+  background-size: 28px 30px;
+  background-image: repeating-linear-gradient(45deg, #6ea6d1, #6ea6d1 10px, #88b6d9 10px, #88b6d9 20px);
   transition: width .3s ease;
 }
-.mphb-upload-import-details-wrapper .mphb-progress__text {
+.mphb-progress.mphb-wait .mphb-progress__bar {
+  width: 100% !important;
+  opacity: 0.65;
+  animation: animate-mphb-progress-bar 1.5s linear infinite;
+}
+.mphb-progress .mphb-progress__text {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -22,6 +28,14 @@
   text-shadow: 1px 0px 1px rgba(255, 255, 255, 0.5);
   font-size: 14px;
   font-weight: bold;
+}
+@keyframes animate-mphb-progress-bar {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 28px 0;
+  }
 }
 .mphb-upload-import-details-wrapper .mphb-logs .notice {
   padding-top: 10px;

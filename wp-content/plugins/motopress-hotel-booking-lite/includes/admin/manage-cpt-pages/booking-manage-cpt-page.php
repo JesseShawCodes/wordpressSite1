@@ -12,9 +12,11 @@ class BookingManageCPTPage extends ManageCPTPage {
 	protected function addActionsAndFilters(){
 		parent::addActionsAndFilters();
 
-		$this->addTitleAction( __( 'New Booking', 'motopress-hotel-booking' ), '#', array( 'class' => 'button-disabled', 'after' => mphb_upgrade_to_premium_message( '<span class="description">', '</span>' ) ) );
+		$this->addTitleAction( __( 'New Booking', 'motopress-hotel-booking' ), '#', array( 'class' => 'button-disabled', 'after' => mphb_upgrade_to_premium_message() ) );
 
 		add_filter( 'request', array( $this, 'filterCustomOrderBy' ) );
+
+        add_filter( 'views_edit-mphb_booking', array( $this, 'addImportedView' ) );
 
 		add_filter( 'post_row_actions', array( $this, 'filterRowActions' ) );
         add_action( 'restrict_manage_posts', array( $this, 'addAccommodationsFilter' ) );
@@ -32,7 +34,15 @@ class BookingManageCPTPage extends ManageCPTPage {
 		add_action( 'admin_notices', array( $this, 'bulkAdminNotices' ) );
 		add_action( 'admin_footer', array( $this, 'bulkAdminScript' ) );
 		add_action( 'load-edit.php', array( $this, 'bulkAction' ) );
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueueAdminScripts' ) );
 	}
+
+    public function enqueueAdminScripts(){
+		if ( $this->isCurrentPage() ) {
+			MPHB()->getAdminScriptManager()->enqueue();
+		}
+    }
 
 	public function filterColumns( $columns ){
 
@@ -60,9 +70,8 @@ class BookingManageCPTPage extends ManageCPTPage {
 
 	public function filterSortableColumns( $columns ){
 
-		$columns['id']				 = 'ID';
-		$columns['check_in_date']	 = 'mphb_check_in_date';
-		$columns['check_out_date']	 = 'mphb_check_out_date';
+		$columns['id'] = 'ID';
+		$columns['check_in_out_date'] = 'mphb_check_in_out_date';
 
 		return $columns;
 	}
@@ -148,26 +157,56 @@ class BookingManageCPTPage extends ManageCPTPage {
 
 				break;
 			case 'customer_info':
-				$customer = $booking->getCustomer();
-				?>
-				<p>
-					<?php if ( $customer ) : ?>
-						<?php echo esc_html( $customer->getFirstName() . ' ' . $customer->getLastName() ); ?>
-						<br>
-						<a href="mailto:<?php echo esc_html( $customer->getEmail() ); ?>">
-							<?php echo esc_html( $customer->getEmail() ); ?>
-						</a>
-						<br>
-						<a href="tel:<?php echo esc_html( $customer->getPhone() ); ?>">
-							<?php echo esc_html( $customer->getPhone() ); ?>
-						</a>
-					<?php else: ?>
-						<span aria-hidden="true"><?php echo static::EMPTY_VALUE_PLACEHOLDER; ?></span>
-					<?php endif; ?>
-				</p>
-				<?php
+                if ($booking->isImported()) {
+                    $summary = $booking->getICalSummary();
+                    $description = $booking->getICalDescription();
+
+                    $info = '';
+
+                    if (!empty($summary)) {
+                        $info = sprintf(__('Summary: %s.', 'motopress-hotel-booking'), $summary);
+                    }
+
+                    if (!empty($description)) {
+                        if (!empty($info)) {
+                            $info .= '<br />';
+                        }
+                        $info .= str_replace("\n", '<br />', trim($description, '"'));
+                    }
+
+                    if (!empty($info)) {
+                        echo '<p>', $info, '</p>';
+                    } else {
+                        echo static::EMPTY_VALUE_PLACEHOLDER;
+                    }
+                } else {
+                    $customer = $booking->getCustomer();
+                    ?>
+                    <p>
+                        <?php if ( $customer ) : ?>
+                            <?php echo esc_html( $customer->getFirstName() . ' ' . $customer->getLastName() ); ?>
+                            <br>
+                            <a href="mailto:<?php echo esc_html( $customer->getEmail() ); ?>">
+                                <?php echo esc_html( $customer->getEmail() ); ?>
+                            </a>
+                            <br>
+                            <a href="tel:<?php echo esc_html( $customer->getPhone() ); ?>">
+                                <?php echo esc_html( $customer->getPhone() ); ?>
+                            </a>
+                        <?php else: ?>
+                            <span aria-hidden="true"><?php echo static::EMPTY_VALUE_PLACEHOLDER; ?></span>
+                        <?php endif; ?>
+                    </p>
+                    <?php
+                }
 				break;
 			case 'price':
+                // Don't show the price for imported bookings
+                if ( $booking->isImported() ) {
+                    echo static::EMPTY_VALUE_PLACEHOLDER;
+                    break;
+                }
+
 				Views\BookingView::renderTotalPriceHTML( $booking );
 				echo '<br/>';
 				$payments	 = MPHB()->getPaymentRepository()->findAll( array(
@@ -378,6 +417,10 @@ class BookingManageCPTPage extends ManageCPTPage {
 
     public function addAccommodationsFilter()
     {
+        if (!$this->isCurrentPage()) {
+            return;
+        }
+
         // WPML note: with "All languages" selected the method will return both
         // original and translated room types
         $roomTypes = MPHB()->getRoomTypeRepository()->getIdTitleList();
@@ -418,6 +461,43 @@ class BookingManageCPTPage extends ManageCPTPage {
         echo '</select>';
     }
 
+    public function addImportedView($views)
+    {
+        $importedCount = MPHB()->getBookingRepository()->getImportedCount();
+
+        if ($importedCount == 0) {
+            return $views;
+        }
+
+        $viewUrl = $this->getUrl(array('post_status' => 'imported'));
+        $linkAtts = $this->isImportedView() ? ' class="current" aria-current="page"' : '';
+
+        // translators: The number of imported bookings: "Imported <span>(11)</span>"
+        $label = sprintf(__('Imported %s', 'motopress-hotel-booking'), '<span class="count">(%s)</span>');
+        $label = sprintf($label, number_format_i18n($importedCount));
+
+        // Build link like in \WP_Plugins_List_Table::get_views() in
+        // wp-admin/includes/class-wp-plugins-list-table.php
+        $view = sprintf('<a href="%s"%s>%s</a>', esc_url($viewUrl), $linkAtts, $label);
+
+        $views['mphb_imported'] = $view;
+
+        return $views;
+    }
+
+    public function isImportedView()
+    {
+        return isset($_GET['post_status']) && $_GET['post_status'] === 'imported';
+    }
+
+    protected function isBookingsQuery($query)
+    {
+        return $this->isCurrentPage()
+            // Don't break reserved rooms/room types queries on current page
+            && isset($query->query['post_type'])
+            && $query->query['post_type'] === MPHB()->postTypes()->booking()->getPostType();
+    }
+
 	/**
      * Replace the search in post_title, post_excerpt and post_content.
      *
@@ -431,43 +511,72 @@ class BookingManageCPTPage extends ManageCPTPage {
     {
 		global $wpdb;
 
-        if (!$this->isCurrentPage() || !isset($query->query['s'])) {
+        if (!$this->isBookingsQuery($query)) {
             return $where;
         }
 
-        $search = trim($query->query['s']);
+        $search = isset($query->query['s']) ? trim($query->query['s']) : '';
 
-		if ($search != '') {
+        // Apply search filter
+		if ($search !== '') {
             $query->set('mphb_join_booking_meta', true);
 
+            $alternatives = array();
+
+            // Search by ID and price
             if (is_numeric($search)) {
                 $id = intval($search);
 
                 $price = mphb_format_price(floatval($search), array('as_html' => false, 'currency_symbol' => ''));
                 $price = mphb_trim_decimal_zeros($price);
 
-                $where = $wpdb->prepare(" AND ({$wpdb->posts}.ID = %d OR (mphb_bookmeta.meta_key IN ('mphb_phone', 'mphb_zip') AND mphb_bookmeta.meta_value = %s) OR (mphb_bookmeta.meta_key = 'mphb_total_price' AND mphb_bookmeta.meta_value = %s))", $id, $search, $price);
-
-            } else {
-                if (DateUtils::isDate($search)) {
-                    $search = DateUtils::convertDateFormat($search, MPHB()->settings()->dateTime()->getDateFormat(), MPHB()->settings()->dateTime()->getDateTransferFormat());
-                }
-
-                $countryCode = MPHB()->settings()->main()->getCountriesBundle()->getCountryCode($search);
-
-                if ($countryCode === false) {
-                    $where = $wpdb->prepare(" AND mphb_bookmeta.meta_key LIKE 'mphb_%' AND mphb_bookmeta.meta_value = %s", $search);
-                } else {
-                    $where = $wpdb->prepare(" AND mphb_bookmeta.meta_key LIKE 'mphb_%' AND mphb_bookmeta.meta_value IN (%s, %s)", $search, $countryCode);
-                }
+                $alternatives[] = $wpdb->prepare("{$wpdb->posts}.ID = %d", $id);
+                $alternatives[] = $wpdb->prepare("(mphb_bookmeta.meta_key = 'mphb_total_price' AND mphb_bookmeta.meta_value = %s)", $price);
             }
+
+            // Search any other match
+            $searchVariants = array($search);
+
+            if (DateUtils::isDate($search)) {
+                $searchVariants[] = DateUtils::convertDateFormat($search, MPHB()->settings()->dateTime()->getDateFormat(), MPHB()->settings()->dateTime()->getDateTransferFormat());
+            }
+
+            $countryCode = MPHB()->settings()->main()->getCountriesBundle()->getCountryCode($search);
+
+            if ($countryCode !== false) {
+                $searchVariants[] = $countryCode;
+            }
+
+            if (count($searchVariants) == 1) {
+                // The $search is neither date, nor country code
+                $alternatives[] = $wpdb->prepare("(mphb_bookmeta.meta_key LIKE 'mphb_%' AND mphb_bookmeta.meta_value = %s)", $search);
+            } else {
+                // The $search may be date, country code or both
+                $searchVariants = esc_sql($searchVariants);
+                $searchValues = "'" . implode("', '", $searchVariants) . "'";
+
+                $alternatives[] = "(mphb_bookmeta.meta_key LIKE 'mphb_%' AND mphb_bookmeta.meta_value IN ({$searchValues}))";
+            }
+
+            // Add all alternatives to WHERE statement
+            $where = ' AND (' . implode(' OR ', $alternatives) . ')';
 		}
 
+        // Apply accommodation filter
         if (!empty($_GET['mphb_room_type_id'])) {
             $query->set('mphb_join_reserved_rooms', true);
 
             $roomTypeId = absint($_GET['mphb_room_type_id']);
             $where .= $wpdb->prepare(" AND mphb_rooms_meta.meta_value = %s", $roomTypeId);
+        }
+
+        // Filter imported bookings
+        if ($this->isImportedView()) {
+            // Show only imported bookings
+            $where .= " AND (mphb_sync_ids.meta_value IS NOT NULL AND mphb_sync_ids.meta_value != '')";
+        } else if (!MPHB()->settings()->main()->displayImportedBookings()) {
+            // Remove imported bookings from the booking list table
+            $where .= " AND (mphb_sync_ids.meta_value IS NULL OR mphb_sync_ids.meta_value = '')";
         }
 
 		return $where;
@@ -484,23 +593,32 @@ class BookingManageCPTPage extends ManageCPTPage {
     {
 		global $wpdb;
 
-		if ($this->isCurrentPage() && isset($query->query['s'])) {
-            $search = trim($query->query['s']);
+        if (!$this->isBookingsQuery($query)) {
+            return $join;
+        }
 
-            $joinBookingMeta   = (bool)$query->get('mphb_join_booking_meta', false);
-            $joinReservedRooms = (bool)$query->get('mphb_join_reserved_rooms', false);
+        $search = isset($query->query['s']) ? trim($query->query['s']) : '';
 
-            if ($search != '' && $joinBookingMeta) {
-                $join .= " LEFT JOIN {$wpdb->postmeta} AS mphb_bookmeta ON {$wpdb->posts}.ID = mphb_bookmeta.post_id ";
-            }
+        $joinBookingMeta   = (bool)$query->get('mphb_join_booking_meta', false);
+        $joinReservedRooms = (bool)$query->get('mphb_join_reserved_rooms', false);
 
-            if ($joinReservedRooms) {
-                $join .= " INNER JOIN {$wpdb->posts} AS mphb_reserved_rooms ON {$wpdb->posts}.ID = mphb_reserved_rooms.post_parent"
-                    . " INNER JOIN {$wpdb->postmeta} AS mphb_reserved_rooms_meta ON mphb_reserved_rooms.ID = mphb_reserved_rooms_meta.post_id AND mphb_reserved_rooms_meta.meta_key = '_mphb_room_id'"
-                    . " INNER JOIN {$wpdb->posts} AS mphb_rooms ON mphb_reserved_rooms_meta.meta_value = mphb_rooms.ID"
-                    . " INNER JOIN {$wpdb->postmeta} AS mphb_rooms_meta ON mphb_rooms.ID = mphb_rooms_meta.post_id AND mphb_rooms_meta.meta_key = 'mphb_room_type_id'";
-            }
+        // Add join for search
+		if ($search !== '' && $joinBookingMeta) {
+            $join .= " LEFT JOIN {$wpdb->postmeta} AS mphb_bookmeta ON {$wpdb->posts}.ID = mphb_bookmeta.post_id ";
 		}
+
+        // Add joins for accommodation filter
+        if (!empty($_GET['mphb_room_type_id']) && $joinReservedRooms) {
+            $join .= " INNER JOIN {$wpdb->posts} AS mphb_reserved_rooms ON {$wpdb->posts}.ID = mphb_reserved_rooms.post_parent"
+                . " INNER JOIN {$wpdb->postmeta} AS mphb_reserved_rooms_meta ON mphb_reserved_rooms.ID = mphb_reserved_rooms_meta.post_id AND mphb_reserved_rooms_meta.meta_key = '_mphb_room_id'"
+                . " INNER JOIN {$wpdb->posts} AS mphb_rooms ON mphb_reserved_rooms_meta.meta_value = mphb_rooms.ID"
+                . " INNER JOIN {$wpdb->postmeta} AS mphb_rooms_meta ON mphb_rooms.ID = mphb_rooms_meta.post_id AND mphb_rooms_meta.meta_key = 'mphb_room_type_id'";
+        }
+
+        // Add joins to remove imported bookings from bookings list table or show only imported bookings
+        if (!MPHB()->settings()->main()->displayImportedBookings() || $this->isImportedView()) {
+            $join .= " LEFT JOIN {$wpdb->postmeta} AS mphb_sync_ids ON {$wpdb->posts}.ID = mphb_sync_ids.post_id AND mphb_sync_ids.meta_key = '_mphb_sync_id'";
+        }
 
 		return $join;
 	}
@@ -510,33 +628,29 @@ class BookingManageCPTPage extends ManageCPTPage {
 		return '';
 	}
 
-	public function filterCustomOrderBy( $vars ){
-		if ( $this->isCurrentPage() && isset( $vars['orderby'] ) ) {
-			switch ( $vars['orderby'] ) {
-				case 'mphb_check_in_date':
-					$vars	 = array_merge( $vars, array(
-						'meta_key'	 => 'mphb_check_in_date',
-						'orderby'	 => 'meta_value',
-						'meta_type'	 => 'DATE'
-						) );
-					break;
-				case 'mphb_check_out_date':
-					$vars	 = array_merge( $vars, array(
-						'meta_key'	 => 'mphb_check_out_date',
-						'orderby'	 => 'meta_value',
-						'meta_type'	 => 'DATE'
-						) );
-					break;
-				case 'mphb_room_id':
-					$vars	 = array_merge( $vars, array(
-						'meta_key'	 => '',
-						'orderby'	 => 'mphb_room_id'
-						) );
-					break;
-			}
-		}
-		return $vars;
-	}
+    public function filterCustomOrderBy($vars)
+    {
+        if ($this->isCurrentPage() && isset($vars['orderby'])) {
+            switch ($vars['orderby']) {
+                case 'mphb_check_in_out_date':
+                    $vars = array_merge($vars, array(
+                        'meta_key'  => 'mphb_check_in_date',
+                        'orderby'   => 'meta_value',
+                        'meta_type' => 'DATE'
+                    ));
+                    break;
+
+                case 'mphb_room_id':
+                    $vars = array_merge($vars, array(
+                        'meta_key' => '',
+                        'orderby'  => 'mphb_room_id'
+                    ));
+                    break;
+            }
+        }
+
+        return $vars;
+    }
 
 	/**
 	 *

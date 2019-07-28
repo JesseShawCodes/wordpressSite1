@@ -58,6 +58,31 @@ class BookingRepository extends AbstractPostRepository {
 		return parent::findAll( $atts );
 	}
 
+    /**
+     * @param string $syncId
+     * @param string $fields Optional. "ids" or "all". "ids" by default.
+     * @return int[]|\MPHB\Entities\Booking[]
+     */
+    public function findAllByCalendar($syncId, $fields = 'ids')
+    {
+        $ids = $this->persistence->getPosts(
+            array(
+                'meta_query' => array(
+                    array(
+                        'key'   => '_mphb_sync_id',
+                        'value' => esc_sql($syncId)
+                    )
+                )
+            )
+        );
+
+        if ($fields == 'all') {
+            return $this->mapPostsToEntity($ids);
+        } else {
+            return $ids;
+        }
+    }
+
 	/**
 	 *
 	 * @param \WP_Post|int $post
@@ -131,6 +156,12 @@ class BookingRepository extends AbstractPostRepository {
 
 		$bookingAtts['checkout_id'] = get_post_meta( $postId, '_mphb_checkout_id', true );
 
+        // If booking has such meta value and meta value is not empty - then the
+        // booking is imported
+        $bookingAtts['sync_id'] = get_post_meta( $postId, '_mphb_sync_id', true );
+
+        $bookingAtts['sync_queue_id'] = get_post_meta( $postId, '_mphb_sync_queue_id', true );
+
 		return $bookingAtts;
 	}
 
@@ -169,6 +200,11 @@ class BookingRepository extends AbstractPostRepository {
 			'mphb_language'			 => $entity->getLanguage(),
 			'_mphb_checkout_id'		 => $entity->getCheckoutId()
 		);
+
+        if ($entity->isImported()) {
+            $postAtts['post_metas']['_mphb_sync_id'] = $entity->getSyncId();
+            $postAtts['post_metas']['_mphb_sync_queue_id'] = $entity->getSyncQueueId();
+        }
 
 		return new Entities\WPPostData( $postAtts );
 	}
@@ -222,5 +258,15 @@ class BookingRepository extends AbstractPostRepository {
 
 		unset( $this->reservedRooms );
 	}
+
+    public function getImportedCount()
+    {
+        global $wpdb;
+
+        $sql = "SELECT COUNT(*) FROM {$wpdb->posts} AS posts INNER JOIN {$wpdb->postmeta} AS postmeta ON posts.ID = postmeta.post_id AND postmeta.meta_key = '_mphb_sync_id' WHERE posts.post_status != 'trash' AND postmeta.meta_value != ''";
+        $count = $wpdb->get_var($sql);
+
+        return (int)$count;
+    }
 
 }

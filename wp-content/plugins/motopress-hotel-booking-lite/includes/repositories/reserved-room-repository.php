@@ -32,15 +32,6 @@ class ReservedRoomRepository extends AbstractPostRepository {
 
 	/**
 	 *
-	 * @param string $uid
-	 * @return Entities\ReservedRoom
-	 */
-	public function findByUid( $uid ){
-		return $this->findByMeta( '_mphb_uid', $uid );
-	}
-
-	/**
-	 *
 	 * @param array $atts
 	 * @param int|int[]	$atts['booking_id']
 	 * @param int|int[]	$atts['room_id']

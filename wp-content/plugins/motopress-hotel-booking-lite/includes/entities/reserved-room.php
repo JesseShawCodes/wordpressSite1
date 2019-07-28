@@ -101,7 +101,7 @@ class ReservedRoom {
 
 		$this->status = isset( $atts['status'] ) ? $atts['status'] : 'publish';
 
-		if ( !empty( $atts['uid'] ) ) {
+		if ( array_key_exists( 'uid', $atts ) ) { // isset() will return false for null
 			$this->uid = $atts['uid'];
 		} else {
 			$this->uid = mphb_generate_uid();
@@ -238,14 +238,14 @@ class ReservedRoom {
 		$price = 0;
 
 		if ( !empty( $this->rateId ) ) {
-			$occupancyParams = mphb_occupancy_parameters( array(
+            MPHB()->reservationRequest()->setupParameters( array(
 				'adults'		 => $this->getAdults(),
 				'children'		 => $this->getChildren(),
 				'check_in_date'	 => $checkInDate,
 				'check_out_date' => $checkOutDate
 			) );
 			$rate = MPHB()->getRateRepository()->findById( $this->rateId );
-			$price = $rate->calcPrice( $checkInDate, $checkOutDate, $occupancyParams );
+			$price = $rate->calcPrice( $checkInDate, $checkOutDate );
 		}
 
 		return $price;
@@ -262,7 +262,7 @@ class ReservedRoom {
 		$breakdown = array();
 
 		if ( !empty( $this->rateId ) ) {
-			$occupancyParams = mphb_occupancy_parameters( array(
+			MPHB()->reservationRequest()->setupParameters( array(
 				'adults'         => $this->getAdults(),
 				'children'       => $this->getChildren(),
 				'check_in_date'  => $checkInDate,
@@ -270,7 +270,7 @@ class ReservedRoom {
 			) );
 
 			$rate      = MPHB()->getRateRepository()->findById( $this->rateId );
-			$breakdown = $rate->getPriceBreakdown( $checkInDate, $checkOutDate, $occupancyParams );
+			$breakdown = $rate->getPriceBreakdown( $checkInDate, $checkOutDate );
 		}
 
 		return $breakdown;
@@ -285,7 +285,7 @@ class ReservedRoom {
 	 * @return array
 	 */
 	private function getRoomBreakdown( $checkInDate, $checkOutDate, $coupon, $language ) {
-		$occupancyParams = mphb_occupancy_parameters( array(
+		MPHB()->reservationRequest()->setupParameters( array(
 			'adults'         => $this->getAdults(),
 			'children'       => $this->getChildren(),
 			'check_in_date'  => $checkInDate,
@@ -294,8 +294,8 @@ class ReservedRoom {
 		$rateId          = apply_filters( '_mphb_translate_post_id', $this->rateId, $language );
 		$rate            = MPHB()->getRateRepository()->findById( $rateId );
 		$rateTitle       = $rate ? $rate->getTitle() : '';
-		$priceBreakdown  = $rate ? $rate->getPriceBreakdown( $checkInDate, $checkOutDate, $occupancyParams ) : array();
-		$price           = $rate ? $rate->calcPrice( $checkInDate, $checkOutDate, $occupancyParams ) : 0;
+		$priceBreakdown  = $rate ? $rate->getPriceBreakdown( $checkInDate, $checkOutDate ) : array();
+		$price           = $rate ? $rate->calcPrice( $checkInDate, $checkOutDate ) : 0;
 
 		$discount = 0.0;
 		if ( $coupon ) {

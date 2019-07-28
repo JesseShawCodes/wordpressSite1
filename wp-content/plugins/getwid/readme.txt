@@ -1,7 +1,7 @@
 === Getwid - Gutenberg Blocks ===
 Contributors: MotoPress
 Donate link: https://motopress.com/
-Tags: gutenberg, gutenberg blocks, block, blocks, page builder, editor, section, google maps, google fonts, icon, image box, social links, banner, slider, person, accordion, tabs, testimonial, instagram, counter, price box, progress bar
+Tags: gutenberg, gutenberg blocks, wordpress blocks, blocks, page builder, editor, section, google maps, google fonts, icon, image box, social links, banner, slider, person, accordion, tabs, testimonial, instagram, counter, price box, progress bar, contact form, post carousel, price list, post slider, custom post type
 Requires at least: 5.0
 Tested up to: 5.2
 Requires PHP: 5.6
@@ -13,13 +13,15 @@ Extra Gutenberg blocks for building seamless and aesthetic websites in the WordP
 
 == Description ==
 
-> Please note: Due to the ever-evolving nature of Gutenberg, Getwid is in beta.
-
-Getwid is a collection of 24+ comprehensive Gutenberg blocks that greatly extends the library of existing core blocks.
+Getwid is a **collection of 29+ comprehensive Gutenberg blocks** that greatly extends the library of existing core blocks.
 
 It's brought to you by MotoPress - a trusted WordPress developer with more than six years of experience of creating WordPress tools for content building.
 
 Our collection of extra blocks for Gutenberg ships with a broad blocks bundle for the needs of business websites, startups, creative projects and a diversity of other niches. It enables you to create efficient landing pages, showcase vibrant services pages, build eye-catching portfolios, and make your overall transition to Gutenberg less stressful!
+
+Get a better sense of how the plugin works:
+
+[youtube https://www.youtube.com/watch?v=OxXQ4f1FvS4]
 
 = Getwid Free Gutenberg Blocks =
 
@@ -49,9 +51,13 @@ Multifunctional static and dynamic blocks for Gutenberg:
 * [Price Box Block](https://getwid.getmotopress.com/blocks/price-box-block/) - visualize any data by creating all sorts of comparison and pricing tables.
 * [Progress Bar Block](https://getwid.getmotopress.com/blocks/progress-bar-block/) - a simple animated horizontal progress bar with customizable colors.
 * [Circular Progress Bar Block](https://getwid.getmotopress.com/blocks/circle-progress-bar-block/) - animated circular progress bars with the adjustable bar sickness, size and colors.
+* [Contact Form Block](https://getwid.getmotopress.com/blocks/contact-form-block/) - a simple contact form with a traditional set of the form fields, customizable labels and support for reCAPTCHA.
+* [Post Carousel Block](https://getwid.getmotopress.com/blocks/posts-carousel-block/) - use agile customization options to showcase posts, pages or custom post types in a catchy carousel with a custom layout.
+* [Price List Block](https://getwid.getmotopress.com/blocks/price-list-block/) - a perfect block for featuring restaurant menu prices or a table of contents with the adjustable headings, dotted lines, colors, and images.
+* [Post Slider Block](https://getwid.getmotopress.com/blocks/posts-slider-block/) - fetch your already existing posts, products or other custom post types data into a deeply tunable, stylish slider with several premade layouts.
+* [Custom Post Type Block](https://getwid.getmotopress.com/blocks/posts-grid-list/) - grid, list or custom view of any custom post types with numerous layout and style customization settings.
 
 We are in the process of building more on-demand blocks for Gutenberg!
-
 Check out free [Getwid Base theme](https://wordpress.org/themes/getwid-base/) designed for full compatibility with Getwid plugin.
 
 With Getwid blocks library, we take a special approach to building and styling content in Gutenberg:
@@ -123,12 +129,26 @@ Getwid plugin is distributed under the terms of the GNU GPL.
 
 == Changelog ==
 
+= 1.1.1, Jul 25 2019 =
+* Improved the compatibility with the WordPress Multisite.
+* Added the ability to reduce the font size of the Advanced Heading block on tablet and mobile.
+* Added the ability to set the height of the Image Slider block.
+* Minor bugfixes and improvements.
+
+= 1.1.0, Jul 12 2019 =
+* Added Contact Form block.
+* Added Post Carousel block.
+* Added Price List block.
+* Added Post Slider block.
+* Added Custom Post Type block.
+* Minor bugfixes and improvements.
+
 = 1.0.3, Apr 26 2019 =
-* Added Instagram Block.
-* Added Counter Block.
-* Added Price Box Block.
-* Added Progress Bar Block.
-* Added Circular Progress Bar Block.
+* Added Instagram block.
+* Added Counter block.
+* Added Price Box block.
+* Added Progress Bar block.
+* Added Circular Progress Bar block.
 
 = 1.0.2, Apr 22 2019 =
 * Minor bugfixes and improvements.

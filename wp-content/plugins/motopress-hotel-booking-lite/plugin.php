@@ -108,6 +108,9 @@ class HotelBookingPlugin {
 
 	private $upgradeToPremiumMenuPage;
 
+    /** @var \MPHB\Admin\MenuPages\ReportsMenuPage */
+    private $reportsPage;
+
     /** @var MPHB\Admin\MenuPages\ExtensionsMenuPage */
     private $extensionsPage;
 
@@ -148,6 +151,12 @@ class HotelBookingPlugin {
 	 */
 	private $importer;
 
+
+    /** @var \MPHB\CSV\Bookings\BookingsExporter */
+    private $bookingsExporter;
+
+    /** @var \MPHB\Downloader */
+    private $downloader;
 
 	/**
 	 *
@@ -209,6 +218,11 @@ class HotelBookingPlugin {
 	 */
 	private $searchParametersStorage;
 
+    /**
+     * @var \MPHB\ReservationRequest
+     */
+    private $reservationRequest;
+
 	/**
 	 *
 	 * @var \MPHB\Settings\SettingsRegistry
@@ -256,6 +270,7 @@ class HotelBookingPlugin {
 	private $paymentRepository;
 	private $reservedRoomRepository;
 	private $couponRepository;
+    private $syncUrlsRepository;
 
 	/**
 	 *
@@ -329,6 +344,10 @@ class HotelBookingPlugin {
 		$this->importer	 = new \MPHB\Importer();
 
 
+        $this->bookingsExporter = new \MPHB\CSV\Bookings\BookingsExporter();
+
+        $this->downloader = new \MPHB\Downloader();
+
 		$this->emails		 = new \MPHB\Emails\Emails();
 		$this->userActions	 = new \MPHB\UserActions\UserActions;
 
@@ -341,6 +360,7 @@ class HotelBookingPlugin {
 		$this->initWidgets();
 
 		$this->searchParametersStorage = new \MPHB\SearchParametersStorage();
+        $this->reservationRequest = new \MPHB\ReservationRequest();
 
 		$this->ajax = new \MPHB\Ajax();
 
@@ -370,6 +390,7 @@ class HotelBookingPlugin {
 		$this->paymentRepository		 = new \MPHB\Repositories\PaymentRepository( $this->paymentPersistence );
 		$this->reservedRoomRepository	 = new \MPHB\Repositories\ReservedRoomRepository( $this->reservedRoomPersistence );
 		$this->couponRepository			 = new \MPHB\Repositories\CouponRepository( $this->couponPersistence );
+        $this->syncUrlsRepository        = new \MPHB\Repositories\SyncUrlsRepository();
 	}
 
 	private function initBookingRules(){
@@ -459,6 +480,12 @@ class HotelBookingPlugin {
 		$upgradeToPremiumSettings = array( 'order' => 150 );
 
 		$this->upgradeToPremiumMenuPage = new \MPHB\Admin\MenuPages\UpgradeToPremiumMenuPage( 'mphb_premium', $upgradeToPremiumSettings );
+
+        $reportsPageSettings = array(
+            'order' => 170
+        );
+
+        $this->reportsPage = new \MPHB\Admin\MenuPages\ReportsMenuPage('mphb_reports', $reportsPageSettings);
 
         $extensionsPageSettings = array(
             'order' => 180
@@ -804,6 +831,14 @@ class HotelBookingPlugin {
 
 
     /**
+     * @return MPHB\Admin\MenuPages\ReportsMenuPage
+     */
+    public function getReportsPage()
+    {
+        return $this->reportsPage;
+    }
+
+    /**
      * @return MPHB\Admin\MenuPages\ExtensionsMenuPage
      */
     public function getExtensionsPage()
@@ -819,6 +854,14 @@ class HotelBookingPlugin {
 		return $this->importer;
 	}
 
+
+    /**
+     * @return \MPHB\CSV\Bookings\BookingsExporter
+     */
+    public function getBookingsExporter()
+    {
+        return $this->bookingsExporter;
+    }
 
 	/**
 	 *
@@ -868,6 +911,14 @@ class HotelBookingPlugin {
 		return $this->searchParametersStorage;
 	}
 
+    /**
+     * @return \MPHB\ReservationRequest
+     */
+    public function reservationRequest()
+    {
+        return $this->reservationRequest;
+    }
+
 	/**
 	 *
 	 * @param string $version version to compare with wp version
@@ -885,11 +936,21 @@ class HotelBookingPlugin {
 		MPHB()->postTypes()->flushRewriteRules();
 
         HotelBookingPlugin::createTables();
+
+        mphb_create_uploads_dir();
 	}
 
     static public function createTables()
     {
         global $wpdb;
+
+        $syncUrls = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}mphb_sync_urls ("
+            . " url_id INT NOT NULL AUTO_INCREMENT,"
+            . " room_id INT NOT NULL,"
+            . " sync_id VARCHAR(32) NOT NULL,"
+            . " calendar_url VARCHAR(250) NOT NULL,"
+            . " PRIMARY KEY (url_id)"
+            . ") CHARSET=utf8 AUTO_INCREMENT=1";
 
         $syncQueue = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}mphb_sync_queue ("
             . " queue_id INT NOT NULL AUTO_INCREMENT,"
@@ -901,10 +962,13 @@ class HotelBookingPlugin {
         $syncStats = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}mphb_sync_stats ("
             . " stat_id INT NOT NULL AUTO_INCREMENT,"
             . " queue_id INT NOT NULL,"
-            . " stat_total INT NOT NULL,"
-            . " stat_succeed INT NOT NULL,"
-            . " stat_skipped INT NOT NULL,"
-            . " stat_failed INT NOT NULL,"
+            . " import_total INT NOT NULL DEFAULT 0,"
+            . " import_succeed INT NOT NULL DEFAULT 0,"
+            . " import_skipped INT NOT NULL DEFAULT 0,"
+            . " import_failed INT NOT NULL DEFAULT 0,"
+            . " clean_total INT NOT NULL DEFAULT 0,"
+            . " clean_done INT NOT NULL DEFAULT 0,"
+            . " clean_skipped INT NOT NULL DEFAULT 0,"
             . " PRIMARY KEY (stat_id)"
             . ") CHARSET=utf8 AUTO_INCREMENT=1";
 
@@ -917,6 +981,7 @@ class HotelBookingPlugin {
             . " PRIMARY KEY (log_id)"
             . ") CHARSET=utf8 AUTO_INCREMENT=1";
 
+        $wpdb->query($syncUrls);
         $wpdb->query($syncQueue);
         $wpdb->query($syncStats);
         $wpdb->query($syncLogs);
@@ -1092,6 +1157,14 @@ class HotelBookingPlugin {
 	 */
 	public function getCouponRepository(){
 		return $this->couponRepository;
+	}
+
+	/**
+	 * @return \MPHB\Repositories\SyncUrlsRepository
+	 */
+	public function getSyncUrlsRepository()
+    {
+		return $this->syncUrlsRepository;
 	}
 
 	/**

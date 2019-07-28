@@ -291,26 +291,27 @@ class SearchResultsShortcode extends AbstractShortcode {
 		$lockedRooms	 = MPHB()->getRoomPersistence()->searchRooms( $roomsAtts );
 		$lockedRoomsStr	 = join( ',', $lockedRooms );
 
-		$query = "SELECT DISTINCT room_types.ID AS id, COUNT(DISTINCT rooms.ID) AS count "
-			. "FROM $wpdb->posts AS rooms ";
+		$query = "SELECT DISTINCT room_types.ID AS id, COUNT(DISTINCT rooms.ID) AS count"
+            . " FROM {$wpdb->posts} AS rooms";
 
-		$join = "INNER JOIN $wpdb->postmeta AS room_meta_room_type_id "
-			. "		ON ( rooms.ID = room_meta_room_type_id.post_id  ) "
-			. "INNER JOIN $wpdb->posts AS room_types "
-			. "		ON ( room_meta_room_type_id.meta_value = room_types.ID ) ";
+        $join = " INNER JOIN {$wpdb->postmeta} AS room_type_ids"
+            . " ON rooms.ID = room_type_ids.post_id AND room_type_ids.meta_key = 'mphb_room_type_id'"
+            . " INNER JOIN {$wpdb->posts} AS room_types"
+            . " ON room_type_ids.meta_value = room_types.ID";
 
-		$where = "WHERE 1=1 "
-			. "AND rooms.post_type = '" . MPHB()->postTypes()->room()->getPostType() . "' "
-			. (!empty( $lockedRoomsStr ) ? "AND rooms.ID NOT IN ( $lockedRoomsStr ) " : "" )
-			. "AND rooms.post_status = 'publish' "
-			. "AND room_meta_room_type_id.meta_key = 'mphb_room_type_id' "
-			. "AND room_meta_room_type_id.meta_value IS NOT NULL "
-			. "AND room_meta_room_type_id.meta_value <> '' "
-			. "AND room_types.post_status = 'publish' "
-			. "AND room_types.post_type = '" . MPHB()->postTypes()->roomType()->getPostType() . "' ";
+		$where = " WHERE 1=1"
+			. " AND rooms.post_type = '" . MPHB()->postTypes()->room()->getPostType() . "'"
+			. " AND rooms.post_status = 'publish'"
+            . ( !empty( $lockedRoomsStr ) ? " AND rooms.ID NOT IN ({$lockedRoomsStr})" : "" )
 
-		$order = "GROUP BY room_meta_room_type_id.meta_value "
-			. "DESC";
+			. " AND room_type_ids.meta_value IS NOT NULL"
+			. " AND room_type_ids.meta_value != ''"
+
+			. " AND room_types.post_type = '" . MPHB()->postTypes()->roomType()->getPostType() . "'"
+			. " AND room_types.post_status = 'publish'";
+
+		$order = " GROUP BY room_type_ids.meta_value"
+            . " ORDER BY room_type_ids.meta_value DESC";
 
 		if ( !empty( $this->attributes ) ) {
 			// Add attributes to the query. At the moment the relation between
@@ -321,10 +322,13 @@ class SearchResultsShortcode extends AbstractShortcode {
 			$inTerms	 = array_unique( $inTerms );
 			$inTermsStr	 = join( ',', $inTerms );
 
-			$join .= "INNER JOIN $wpdb->term_relationships AS room_attributes "
-				. " ON ( room_attributes.object_id = room_types.ID ) ";
+            // "object_id" can differ from "term_taxonomy_id"; see issue [MB-935]
+            $join .= " INNER JOIN {$wpdb->term_relationships} AS room_relationships"
+				. " ON room_types.ID = room_relationships.object_id"
+                . " INNER JOIN {$wpdb->term_taxonomy} AS room_attributes"
+                . " ON room_relationships.term_taxonomy_id = room_attributes.term_taxonomy_id";
 
-			$where .= "AND room_attributes.term_taxonomy_id IN ( $inTermsStr ) "; // Here term ID can be any from the required list
+			$where .= " AND room_attributes.term_id IN ({$inTermsStr})"; // Here term ID can be any from the required list
 		}
 
 		$roomTypeDetails = $wpdb->get_results( $query . $join . $where . $order, ARRAY_A );

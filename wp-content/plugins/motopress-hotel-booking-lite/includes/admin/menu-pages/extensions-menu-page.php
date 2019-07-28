@@ -55,14 +55,15 @@ class ExtensionsMenuPage extends AbstractMenuPage
         $apiProducts = $this->requestProducts();
         $products = $this->parseProducts($apiProducts);
 
-        // Load from cache option
+        // Load from reserve option
         if ($products === false) {
             $products = get_option('mphb_last_known_extensions', false);
+        } else {
+            update_option('mphb_last_known_extensions', $products, 'no');
         }
 
         if ($products !== false) {
             set_transient('mphb_extensions', $products, DAY_IN_SECONDS);
-            update_option('mphb_last_known_extensions', $products, 'no');
         }
 
         return $products;
@@ -73,7 +74,12 @@ class ExtensionsMenuPage extends AbstractMenuPage
      */
     protected function requestProducts()
     {
-        $request = wp_remote_get('https://motopress.com/edd-api/v2/products/?category=hotel-booking-addons');
+        $requestUrl = 'https://motopress.com/edd-api/v2/products/?category=hotel-booking-addons';
+        $requestArgs = array(
+            'timeout' => 15
+        );
+
+        $request = wp_remote_get($requestUrl, $requestArgs);
 
         if (is_wp_error($request)) {
             return false;

@@ -163,8 +163,6 @@ class RoomTypeEditCPTPage extends EditCPTPage {
 	}
 
 	public function saveMetaBoxes( $postId, $post, $update ){
-		global $mphbAttributes;
-
 		if ( !parent::saveMetaBoxes( $postId, $post, $update ) ) {
 			return false;
 		}

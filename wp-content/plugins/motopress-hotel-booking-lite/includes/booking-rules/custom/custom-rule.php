@@ -7,6 +7,9 @@ use \MPHB\Utils\DateUtils;
 
 class CustomRule implements RuleVerifiable {
 
+    protected $roomTypeId = 0;
+    protected $roomId = 0;
+
 	/**
 	 *
 	 * @var \DateTime
@@ -51,12 +54,14 @@ class CustomRule implements RuleVerifiable {
 	 * @param array $atts['restrictions']
 	 */
 	protected function __construct( $atts ){
-		$this->dateFrom		 = $atts['date_from'];
-		$this->dateTo		 = $atts['date_to'];
-		$this->notCheckIn	 = in_array( 'check-in', $atts['restrictions'] );
-		$this->notCheckOut	 = in_array( 'check-out', $atts['restrictions'] );
-		$this->notStayIn	 = in_array( 'stay-in', $atts['restrictions'] );
-		$this->comment		 = $atts['comment'];
+        $this->roomTypeId  = (int)$atts['room_type_id'];
+        $this->roomId      = (int)$atts['room_id'];
+		$this->dateFrom    = $atts['date_from'];
+		$this->dateTo      = $atts['date_to'];
+		$this->notCheckIn  = in_array( 'check-in', $atts['restrictions'] );
+		$this->notCheckOut = in_array( 'check-out', $atts['restrictions'] );
+		$this->notStayIn   = in_array( 'stay-in', $atts['restrictions'] );
+		$this->comment     = $atts['comment'];
 	}
 
 	public function getRestrictions(){
@@ -130,37 +135,75 @@ class CustomRule implements RuleVerifiable {
 		}
 	}
 
-	protected function noCheckIn( \DateTime $checkInDate ){
-		return $this->notCheckIn
-			&& $this->compareDates( $checkInDate, '>=', $this->dateFrom )
-			&& $this->compareDates( $checkInDate, '<=', $this->dateTo );
+    /**
+     * @param \DateTime|null $checkInDate Optional. If not set - don't check the
+     *                                    dates.
+     * @return bool
+     */
+	public function noCheckIn(\DateTime $checkInDate = null)
+    {
+        if (is_null($checkInDate)) {
+            return $this->notCheckIn;
+        } else {
+    		return $this->notCheckIn
+                && $this->compareDates($checkInDate, '>=', $this->dateFrom)
+                && $this->compareDates($checkInDate, '<=', $this->dateTo);
+        }
 	}
 
-	protected function noCheckOut( \DateTime $checkOutDate ){
-		return $this->notCheckOut
-			&& $this->compareDates( $checkOutDate, '>=', $this->dateFrom )
-			&& $this->compareDates( $checkOutDate, '<=', $this->dateTo );
+    /**
+     * @param \DateTime|null $checkOutDate Optional. If not set - don't check
+     *                                     the dates.
+     * @return bool
+     */
+	public function noCheckOut(\DateTime $checkOutDate = null)
+    {
+        if (is_null($checkOutDate)) {
+            return $this->notCheckOut;
+        } else {
+            return $this->notCheckOut
+                && $this->compareDates($checkOutDate, '>=', $this->dateFrom)
+                && $this->compareDates($checkOutDate, '<=', $this->dateTo);
+        }
 	}
 
-	protected function noStayIn( \DateTime $checkInDate, \DateTime $checkOutDate ){
-		if ( !$this->notStayIn ) {
+    /**
+     * @param \DateTime|null $checkInDate
+     * @param \DateTime|null $checkOutDate
+     * @return bool
+     */
+	public function noStayIn(\DateTime $checkInDate = null, \DateTime $checkOutDate = null)
+    {
+		if (!$this->notStayIn) {
 			return false;
 		}
 
-		$beforeCheckOut = clone $checkOutDate;
-		$beforeCheckOut->modify( '-1 day' );
+        if (!is_null($checkInDate) && $this->compareDates($this->dateTo, '<', $checkInDate)) {
+            return false;
+        }
 
-		return $this->compareDates( $this->dateFrom, '<=', $beforeCheckOut )
-			&& $this->compareDates( $this->dateTo, '>=', $checkInDate );
+        if (!is_null($checkOutDate)) {
+            $beforeCheckOut = clone $checkOutDate;
+            $beforeCheckOut->modify('-1 day');
+
+            if ($this->compareDates($this->dateFrom, '>', $beforeCheckOut)) {
+                return false;
+            }
+        }
+
+		return true;
 	}
 
-	protected function compareDates( \DateTime $date1, $operator, \DateTime $date2 ){
-		$date1 = $date1->format( 'Ymd' );
-		$date2 = $date2->format( 'Ymd' );
+	protected function compareDates(\DateTime $date1, $operator, \DateTime $date2)
+    {
+		$date1 = $date1->format('Ymd');
+		$date2 = $date2->format('Ymd');
 
-		switch ( $operator ) {
-			case '>=': return ( $date1 >= $date2 ); break;
-			case '<=': return ( $date1 <= $date2 ); break;
+		switch ($operator) {
+            case '>': return $date1 > $date2; break;
+			case '>=': return $date1 >= $date2; break;
+            case '<': return $date1 < $date2; break;
+			case '<=': return $date1 <= $date2; break;
 		}
 
 		return false;
@@ -195,5 +238,25 @@ class CustomRule implements RuleVerifiable {
 
 		return new self( $atts );
 	}
+
+    public function getRoomTypeId()
+    {
+        return $this->roomTypeId;
+    }
+
+    public function getRoomId()
+    {
+        return $this->roomId;
+    }
+
+    public function getStartDate()
+    {
+        return $this->dateFrom;
+    }
+
+    public function getEndDate()
+    {
+        return $this->dateTo;
+    }
 
 }

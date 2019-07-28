@@ -52,36 +52,16 @@ class Room {
 	}
 
 	/**
-	 *
-	 * @return array
+	 * @return string[] [%syncId% => %calendarUrl%]
 	 */
-	public function getSyncData(){
-		$syncData = get_post_meta( $this->id, 'mphb_sync_urls', true );
-		return is_array( $syncData ) ? $syncData : array();
+	public function getSyncUrls()
+    {
+		return MPHB()->getSyncUrlsRepository()->getUrls($this->id);
 	}
 
-	/**
-	 *
-	 * @return string[]
-	 */
-	public function getSyncUrls(){
-		$urls = array_map( function( $item ) {
-			return isset( $item['url'] ) ? $item['url'] : '';
-		}, $this->getSyncData() );
-		$urls = array_filter( $urls );
-
-		return $urls;
-	}
-
-	public function setSyncData( $newData ){
-		$oldData = $this->getSyncData();
-		if ( $newData != $oldData ) {
-			if ( empty( $newData ) ) {
-				delete_post_meta( $this->getId(), 'mphb_sync_urls' );
-			} else {
-				update_post_meta( $this->getId(), 'mphb_sync_urls', $newData, $oldData );
-			}
-		}
+	public function setSyncUrls($urls)
+    {
+		MPHB()->getSyncUrlsRepository()->updateUrls($this->id, $urls);
 	}
 
 }

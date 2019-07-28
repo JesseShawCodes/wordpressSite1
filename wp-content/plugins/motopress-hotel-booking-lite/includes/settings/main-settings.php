@@ -418,4 +418,35 @@ class MainSettings {
         return apply_filters('mphb_show_extension_links', true);
     }
 
+    public function exportBlockedAccommodations()
+    {
+        return (bool)get_option('mphb_ical_export_blocks', false);
+    }
+
+    public function exportImportedBookings()
+    {
+        return !(bool)get_option('mphb_ical_dont_export_imports', true);
+    }
+
+    /**
+     * @param null|int $userId Optional. Current user by default.
+     * @param null|bool $setValue Optional. If set, will update the value.
+     * @return bool
+     */
+    public function displayImportedBookings($userId = null, $setValue = null)
+    {
+        if (is_null($userId)) {
+            $userId = get_current_user_id();
+        }
+
+        $displayImport = get_user_meta($userId, 'mphb_display_imported_bookings', true);
+
+        if (is_null($setValue)) {
+            return (bool)$displayImport;
+        } else {
+            update_user_meta($userId, 'mphb_display_imported_bookings', $setValue, $displayImport);
+            return $setValue;
+        }
+    }
+
 }
